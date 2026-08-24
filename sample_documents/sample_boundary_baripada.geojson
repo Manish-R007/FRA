@@ -1,0 +1,49 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "claim_id": "FRA-OD-MAY-009",
+        "applicant_name": "Sanatan Soren",
+        "village": "Baripada",
+        "district": "Mayurbhanj",
+        "state": "Odisha",
+        "survey_number": "PLOT-889/B",
+        "area_claimed_hectares": 2.8,
+        "land_use": "Agriculture & Homestead"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              86.7512,
+              21.9415
+            ],
+            [
+              86.7538,
+              21.9429
+            ],
+            [
+              86.7551,
+              21.9412
+            ],
+            [
+              86.7539,
+              21.9398
+            ],
+            [
+              86.7518,
+              21.9401
+            ],
+            [
+              86.7512,
+              21.9415
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

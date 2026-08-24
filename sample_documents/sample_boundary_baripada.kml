@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>FRA Land Boundary - Sanatan Soren</name>
+    <description>Claim ID: FRA-OD-MAY-009, Mayurbhanj, Odisha</description>
+    <Placemark>
+      <name>FRA-OD-MAY-009</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              86.751200,21.941500,0
+              86.753800,21.942900,0
+              86.755100,21.941200,0
+              86.753900,21.939800,0
+              86.751800,21.940100,0
+              86.751200,21.941500,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

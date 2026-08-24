@@ -1,0 +1,59 @@
+{
+  "type": "FeatureCollection",
+  "properties": {
+    "survey_title": "Joint Field Verification & Total Station GPS Survey",
+    "survey_date": "2023-09-15",
+    "survey_team": "Forest Beat Officer + Revenue Inspector + Gram Sabha FRC",
+    "datum": "WGS84 (EPSG:4326)"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "claim_id": "FRA-OD-MAY-010",
+        "applicant_name": "Birsa Munda",
+        "father_name": "Late Sugana Munda",
+        "tribe": "Munda (ST)",
+        "village": "Baripada",
+        "block": "Baripada Sadar",
+        "district": "Mayurbhanj",
+        "state": "Odisha",
+        "claim_type": "IFR",
+        "claimed_area_hectares": 2.5,
+        "survey_number": "SY-108/4A",
+        "land_use": "Traditional Agriculture, Fruit Agroforestry & Homestead"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              86.7562,
+              21.9441
+            ],
+            [
+              86.7589,
+              21.9455
+            ],
+            [
+              86.7601,
+              21.9438
+            ],
+            [
+              86.7588,
+              21.9422
+            ],
+            [
+              86.7568,
+              21.9426
+            ],
+            [
+              86.7562,
+              21.9441
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

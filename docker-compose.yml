@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: fra_postgres_postgis
+    environment:
+      POSTGRES_DB: fra_atlas
+      POSTGRES_USER: fra_user
+      POSTGRES_PASSWORD: fra_password_2025
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fra_user -d fra_atlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fra_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fra_backend_api
+    environment:
+      - DATABASE_URL=postgresql://fra_user:fra_password_2025@postgres:5432/fra_atlas
+      - SECRET_KEY=super-secret-fra-atlas-key-2025-ministry-of-tribal-affairs-secure-sha256
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fra_frontend_webgis
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:

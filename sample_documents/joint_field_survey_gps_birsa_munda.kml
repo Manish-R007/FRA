@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Joint Field Survey GPS Boundary - Birsa Munda</name>
+    <description>Claim ID: FRA-OD-MAY-010, Baripada, Mayurbhanj, Odisha (2.50 Ha)</description>
+    <Placemark>
+      <name>FRA-OD-MAY-010</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              86.756200,21.944100,0
+              86.758900,21.945500,0
+              86.760100,21.943800,0
+              86.758800,21.942200,0
+              86.756800,21.942600,0
+              86.756200,21.944100,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>

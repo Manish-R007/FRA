@@ -1,0 +1,211 @@
+export type UserRole = "ADMIN" | "STATE_OFFICER" | "DISTRICT_OFFICER" | "FIELD_OFFICER" | "ANALYST" | "CITIZEN";
+
+export interface User {
+  id: number;
+  full_name: string;
+  email: string;
+  role: UserRole;
+  state?: string;
+  district?: string;
+  village?: string;
+  is_active: boolean;
+}
+
+export type ClaimType = "IFR" | "CR" | "CFR";
+export type ClaimStatus = "UPLOADED" | "OCR_PROCESSED" | "PENDING_VERIFICATION" | "FIELD_VERIFICATION" | "GIS_VALIDATED" | "SATELLITE_ANALYZE" | "APPROVED" | "REJECTED";
+export type VerificationStatus = "UNVERIFIED" | "VERIFIED" | "REJECTED" | "FLAGGED";
+
+export interface FRAClaim {
+  id: number;
+  claim_id: string;
+  claim_type: ClaimType;
+  applicant_name: string;
+  father_or_husband_name?: string;
+  age?: number;
+  gender?: string;
+  address?: string;
+  village: string;
+  block?: string;
+  district: string;
+  state: string;
+  survey_number?: string;
+  area_claimed: number;
+  area_unit: string;
+  land_use?: string;
+  application_date?: string;
+  status: ClaimStatus;
+  verification_status: VerificationStatus;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+  has_geometry?: boolean;
+  has_analysis?: boolean;
+}
+
+export interface FRAGeometry {
+  id: number;
+  claim_id: number;
+  geometry: any;
+  geometry_source: string;
+  survey_reference?: string;
+  calculated_area_m2: number;
+  calculated_area_hectares: number;
+  claimed_area_hectares: number;
+  area_difference_percentage: number;
+  flag_for_review: boolean;
+  centroid?: [number, number];
+  bbox?: [number, number, number, number];
+  geometry_status: string;
+}
+
+export interface LandCoverStatistic {
+  class_name: "forest" | "crop" | "water" | "building" | "bare_land" | "grassland" | "road" | "other";
+  pixel_count: number;
+  area_m2: number;
+  area_hectares: number;
+  percentage: number;
+  confidence: number;
+}
+
+export interface DetectedAsset {
+  id: number;
+  claim_id: number;
+  asset_type: string;
+  geometry: any;
+  area_m2?: number;
+  confidence: number;
+  model_name: string;
+}
+
+export interface SatelliteAnalysis {
+  id: number;
+  claim_id: number;
+  geometry_id?: number;
+  satellite_source: string;
+  acquisition_date: string;
+  cloud_percentage: number;
+  image_url?: string;
+  false_color_url?: string;
+  ndvi_url?: string;
+  ndwi_url?: string;
+  ndbi_url?: string;
+  mean_ndvi?: number;
+  mean_ndwi?: number;
+  mean_ndbi?: number;
+  processing_status: string;
+  model_name: string;
+  model_version: string;
+  confidence: number;
+  statistics: LandCoverStatistic[];
+  assets: DetectedAsset[];
+  created_at?: string;
+}
+
+export interface SchemeRecommendation {
+  id: number;
+  claim_id: number;
+  scheme_id: number;
+  scheme_name: string;
+  scheme_code: string;
+  department: string;
+  eligibility_status: "ELIGIBLE" | "INELIGIBLE" | "CONDITIONAL";
+  eligibility_score: number;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  reason: string;
+  evidence?: string;
+  citation_page?: number;
+  benefits: string;
+  created_at?: string;
+}
+
+export interface DocumentField {
+  id?: number;
+  field_name: string;
+  field_value?: string;
+  confidence: number;
+  source: string;
+}
+
+export interface DocumentData {
+  id: number;
+  claim_id?: number;
+  file_name: string;
+  file_url: string;
+  document_type: string;
+  ocr_text?: string;
+  ocr_confidence?: number;
+  processing_status: string;
+  fields: DocumentField[];
+  created_at?: string;
+}
+
+export interface VillageConvergence {
+  village: string;
+  district: string;
+  state: string;
+  total_claims: number;
+  approved_claims: number;
+  total_fra_area_hectares: number;
+  mean_forest_pct: number;
+  mean_crop_pct: number;
+  mean_water_pct: number;
+  mean_building_pct: number;
+  priority_level: "HIGH" | "MEDIUM" | "LOW";
+  key_interventions_needed: string[];
+  recommended_schemes: string[];
+  coordinates?: [number, number];
+}
+
+export interface AuditLog {
+  id: number;
+  user_id?: number;
+  action: string;
+  entity: string;
+  entity_id: string;
+  old_value?: string;
+  new_value?: string;
+  hash: string;
+  previous_hash: string;
+  created_at: string;
+  ip_address?: string;
+}
+
+export interface AtlasStatistics {
+  summary: {
+    total_claims: number;
+    approved_claims: number;
+    pending_claims: number;
+    rejected_claims: number;
+    total_claimed_area_hectares: number;
+    total_gis_area_hectares: number;
+    villages_covered: number;
+    districts_covered: number;
+    states_covered: number;
+    flagged_discrepancies: number;
+    high_priority_interventions: number;
+  };
+  claim_types: {
+    IFR: number;
+    CR: number;
+    CFR: number;
+  };
+  land_cover_totals_ha: {
+    forest: number;
+    crop: number;
+    water: number;
+    building: number;
+    bare_land: number;
+  };
+  assets_detected: {
+    total: number;
+    water_bodies: number;
+    farms: number;
+    forest_stands: number;
+    homesteads: number;
+  };
+  charts: {
+    by_state: { state: string; count: number }[];
+    by_district: { district: string; state: string; count: number }[];
+    by_status: { status: string; count: number }[];
+  };
+}
