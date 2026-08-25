@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     GEE_SERVICE_ACCOUNT: Optional[str] = os.getenv("GEE_SERVICE_ACCOUNT", None)
     GEE_PRIVATE_KEY_FILE: Optional[str] = os.getenv("GEE_PRIVATE_KEY_FILE", None)
     
-    # LLM / Gemini API Key
+    # LLM Settings (Groq & Gemini)
+    GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", None)
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", None)
     
     # Copernicus Sentinel Hub (Copernicus Data Space Ecosystem - CDSE)

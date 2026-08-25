@@ -204,6 +204,12 @@ export const api = {
   getClaimRecommendations: async (claimId: number): Promise<SchemeRecommendation[]> => {
     return fetchWithAuth(`/dss/recommendations/${claimId}`);
   },
+  chatDSS: async (req: import("./types").DSSChatRequest): Promise<import("./types").DSSChatResponse> => {
+    return fetchWithAuth("/dss/chat", {
+      method: "POST",
+      body: JSON.stringify(req),
+    });
+  },
   queryDSS: async (query: string, claimId?: number, district?: string, village?: string): Promise<any> => {
     return fetchWithAuth("/dss/query", {
       method: "POST",

@@ -72,7 +72,7 @@ export default function WebGISMap({
   onGeometrySaved,
 }: WebGISMapProps) {
   const [geometries, setGeometries] = useState<any>(initialGeometries || null);
-  const [activeBasemap, setActiveBasemap] = useState<"osm" | "dark" | "satellite">("dark");
+  const [activeBasemap, setActiveBasemap] = useState<"osm" | "satellite">("osm");
   const [selectedFeature, setSelectedFeature] = useState<any>(null);
   const [activeLayer, setActiveLayer] = useState<"ALL" | "IFR" | "CR" | "CFR" | "FLAGGED">("ALL");
   const [showSatelliteOverlay, setShowSatelliteOverlay] = useState(true);
@@ -203,7 +203,6 @@ export default function WebGISMap({
 
   // Base tile URLs
   const basemapUrls = {
-    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     satellite: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   };
@@ -227,7 +226,11 @@ export default function WebGISMap({
       >
         <TileLayer
           url={basemapUrls[activeBasemap]}
-          attribution='&copy; <a href="https://carto.com/">CARTO</a> | Copernicus Sentinel-2 L2A MoTA WebGIS'
+          attribution={
+            activeBasemap === "satellite"
+              ? '&copy; Esri, Maxar, Earthstar Geographics | Copernicus Sentinel-2 L2A MoTA WebGIS'
+              : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | MoTA WebGIS'
+          }
         />
 
         {filteredGeoJSON && (
@@ -287,9 +290,8 @@ export default function WebGISMap({
           {/* Basemap Selection */}
           <div className="space-y-1">
             <label className="text-[10px] font-semibold text-slate-400 uppercase">Basemap Style</label>
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-2 gap-1">
               {[
-                { id: "dark", label: "Dark Carto" },
                 { id: "osm", label: "OSM Standard" },
                 { id: "satellite", label: "Satellite" },
               ].map((b) => (

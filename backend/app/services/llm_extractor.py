@@ -118,13 +118,12 @@ def rule_based_extraction(ocr_text: str) -> LLMExtractedDocument:
 
 async def extract_structured_data(ocr_text: str) -> LLMExtractedDocument:
     """
-    Structured extraction: calls Gemini LLM API if key is configured,
-    otherwise uses the rule-based extraction engine.
-    Never invents missing values; returns null for unverified fields.
+    Structured extraction:
+    1. Primary: Groq LLM API (ultra-fast LLaMA 3.3 70B / LLaMA 3.1 70B) if GROQ_API_KEY is configured.
+    2. Secondary: Google Gemini API if GEMINI_API_KEY is configured.
+    3. Fallback: High-precision deterministic rule parser.
+    Never invents missing values; strictly returns null for unverified fields.
     """
-    if not settings.GEMINI_API_KEY:
-        return rule_based_extraction(ocr_text)
-
     prompt = f"""
     You are an expert Forest Rights Act (FRA) document verification assistant for the Ministry of Tribal Affairs, India.
     Convert the following OCR text extracted from an official FRA Patta / application document into structured JSON.
@@ -154,7 +153,19 @@ async def extract_structured_data(ocr_text: str) -> LLMExtractedDocument:
         "application_date": string or null,
         "field_confidences": {{
             "claim_id": float,
-            "applicant_name": float, ...
+            "applicant_name": float,
+            "father_name": float,
+            "age": float,
+            "gender": float,
+            "village": float,
+            "block": float,
+            "district": float,
+            "state": float,
+            "claim_type": float,
+            "area": float,
+            "survey_number": float,
+            "land_use": float,
+            "application_date": float
         }}
     }}
 
@@ -166,23 +177,59 @@ async def extract_structured_data(ocr_text: str) -> LLMExtractedDocument:
     Return ONLY the raw JSON object.
     """
 
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                url,
-                json={"contents": [{"parts": [{"text": prompt}]}]},
-                headers={"Content-Type": "application/json"}
-            )
-            if response.status_code == 200:
-                result = response.json()
-                candidate_text = result["candidates"][0]["content"]["parts"][0]["text"]
-                # Clean markdown json fences
-                clean_json_str = re.sub(r'```(?:json)?', '', candidate_text).strip()
-                parsed = json.loads(clean_json_str)
-                return LLMExtractedDocument(**parsed)
-    except Exception:
-        pass
+    # 1. Primary: Groq API (LLaMA 3.3 70B Versatile)
+    if settings.GROQ_API_KEY:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": settings.GROQ_MODEL,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are an official Ministry of Tribal Affairs Forest Rights Act document metadata parser. Output strictly valid JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.1
+            }
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(url, json=payload, headers=headers)
+                print("response:", response)
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"]
+                    clean_json_str = re.sub(r'```(?:json)?', '', content).strip()
+                    parsed = json.loads(clean_json_str)
+                    return LLMExtractedDocument(**parsed)
+        except Exception:
+            pass
 
-    # Fallback to high-precision rule parser
+    # 2. Secondary: Gemini API
+    if settings.GEMINI_API_KEY:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    url,
+                    json={"contents": [{"parts": [{"text": prompt}]}]},
+                    headers={"Content-Type": "application/json"}
+                )
+                if response.status_code == 200:
+                    result = response.json()
+                    candidate_text = result["candidates"][0]["content"]["parts"][0]["text"]
+                    clean_json_str = re.sub(r'```(?:json)?', '', candidate_text).strip()
+                    parsed = json.loads(clean_json_str)
+                    return LLMExtractedDocument(**parsed)
+        except Exception:
+            pass
+
+    # 3. Fallback to deterministic rule parser
     return rule_based_extraction(ocr_text)

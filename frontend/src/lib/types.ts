@@ -139,6 +139,78 @@ export interface DocumentData {
   created_at?: string;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: string;
+  model_used?: string;
+}
+
+export interface SatelliteTelemetry {
+  crop_pct: number;
+  forest_pct: number;
+  water_pct: number;
+  building_pct: number;
+  bare_pct: number;
+  mean_ndvi?: number;
+  mean_ndwi?: number;
+  assets_detected: string[];
+  parcel_area_ha?: number;
+  claim_type?: string;
+  water_deficit: boolean;
+}
+
+export interface RAGCitation {
+  document_name: string;
+  scheme_code?: string;
+  page_number: number;
+  section_title?: string;
+  excerpt: string;
+  similarity_score: number;
+}
+
+export interface DSSChatRequest {
+  query?: string;
+  messages?: ChatMessage[];
+  claim_id?: number;
+  scheme_code?: string;
+  village?: string;
+  district?: string;
+}
+
+export interface DSSChatResponse {
+  message: ChatMessage;
+  context_type: string;
+  claim_context?: {
+    id: number;
+    claim_id: string;
+    applicant_name: string;
+    father_or_husband_name?: string;
+    village: string;
+    district: string;
+    state: string;
+    claim_type: string;
+    area_claimed: number;
+    status: string;
+    verification_status: string;
+    land_use?: string;
+  };
+  satellite_telemetry?: SatelliteTelemetry;
+  recommendations: SchemeRecommendation[];
+  citations: RAGCitation[];
+  suggested_followups: string[];
+  statistics?: Record<string, any>;
+}
+
+export interface DSSQueryResponse {
+  query: string;
+  answer: string;
+  context_type: string;
+  recommendations?: SchemeRecommendation[];
+  citations: RAGCitation[];
+  statistics?: Record<string, any>;
+}
+
 export interface VillageConvergence {
   village: string;
   district: string;
