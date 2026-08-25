@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
-from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats
+from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats, sentinel
 from app.models.user import User
 
 # Initialize tables
@@ -37,6 +37,7 @@ app.include_router(claims.router, prefix=settings.API_V1_STR)
 app.include_router(documents.router, prefix=settings.API_V1_STR)
 app.include_router(geometries.router, prefix=settings.API_V1_STR)
 app.include_router(analysis.router, prefix=settings.API_V1_STR)
+app.include_router(sentinel.router, prefix=settings.API_V1_STR)
 app.include_router(schemes.router, prefix=settings.API_V1_STR)
 app.include_router(dss.router, prefix=settings.API_V1_STR)
 app.include_router(audit.router, prefix=settings.API_V1_STR)

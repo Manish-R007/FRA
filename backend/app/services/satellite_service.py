@@ -218,41 +218,44 @@ def render_and_save_rasters(
         "ndbi_url": f"/api/analysis/imagery/claim_{claim_id}_ndbi.png",
     }
 
+from app.services.sentinel_hub_service import sentinel_hub_client
+
 def process_satellite_analysis(
     claim_id: str,
-    geojson_geom: Dict[str, Any]
+    geojson_geom: Dict[str, Any],
+    start_date: str = "2026-01-01",
+    end_date: str = "2026-08-01",
+    max_cloud_cover: float = 20.0,
+    resolution: float = 10.0
 ) -> Dict[str, Any]:
     """
-    Full Remote Sensing Pipeline:
-    1. Geometrical validation
-    2. Sentinel-2 multispectral band retrieval & polygon clipping
+    Full Copernicus Sentinel-2 Remote Sensing Pipeline:
+    1. Geometrical validation & exact parcel polygon clipping
+    2. CDSE Sentinel Hub Process API execution / Physical spectral model
     3. Spectral indices (NDVI, NDWI, NDBI) computation
-    4. Raster rendering & storage
-    5. Mean index calculation
+    4. Raster rendering & storage (RGB, CIR, NDVI, NDWI, NDBI)
+    5. Parcel-level statistics and land-cover area percentages
     """
-    # Use geometry hash as seed for deterministic reproducibility per parcel
-    geom_str = str(geojson_geom.get("coordinates", []))
-    seed = abs(hash(geom_str)) % (2**31)
-
-    bands = generate_multispectral_bands(geojson_geom, seed=seed)
-    indices = calculate_indices(bands)
-    raster_urls = render_and_save_rasters(bands, indices, claim_id)
-
-    mask = bands["mask"]
-    valid_pixels = np.sum(mask)
-    
-    mean_ndvi = float(np.mean(indices["ndvi"][mask])) if valid_pixels > 0 else 0.0
-    mean_ndwi = float(np.mean(indices["ndwi"][mask])) if valid_pixels > 0 else 0.0
-    mean_ndbi = float(np.mean(indices["ndbi"][mask])) if valid_pixels > 0 else 0.0
+    res = sentinel_hub_client.process_and_compute_parcel(
+        claim_id=claim_id,
+        geojson_geom=geojson_geom,
+        start_date=start_date,
+        end_date=end_date,
+        max_cloud_cover=max_cloud_cover,
+        resolution=resolution
+    )
 
     return {
-        "satellite_source": "COPERNICUS/S2_HARMONIZED",
-        "acquisition_date": "2026-08-01",
-        "cloud_percentage": 2.4,
-        "mean_ndvi": round(mean_ndvi, 4),
-        "mean_ndwi": round(mean_ndwi, 4),
-        "mean_ndbi": round(mean_ndbi, 4),
-        "raster_urls": raster_urls,
-        "bands": bands,
-        "indices": indices
+        "satellite_source": res["satellite_source"],
+        "acquisition_date": res["acquisition_date"],
+        "cloud_percentage": res["cloud_percentage"],
+        "mean_ndvi": res["mean_ndvi"],
+        "mean_ndwi": res["mean_ndwi"],
+        "mean_ndbi": res["mean_ndbi"],
+        "raster_urls": res["raster_urls"],
+        "bands": res["bands"],
+        "indices": res["indices"],
+        "statistics": res.get("statistics"),
+        "metadata": res.get("metadata")
     }
+

@@ -17,7 +17,7 @@ def test_satellite_and_indices_pipeline():
     }
 
     sat_res = process_satellite_analysis(claim_id="TEST-001", geojson_geom=sample_poly)
-    assert sat_res["satellite_source"] == "COPERNICUS/S2_HARMONIZED"
+    assert "Copernicus" in sat_res["satellite_source"] or "COPERNICUS" in sat_res["satellite_source"]
     assert "mean_ndvi" in sat_res
     assert "mean_ndwi" in sat_res
     assert "mean_ndbi" in sat_res

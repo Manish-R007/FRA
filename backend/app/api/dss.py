@@ -8,12 +8,36 @@ from app.core.security import get_current_user, require_roles
 from app.models.user import User
 from app.models.claim import FRAClaim
 from app.schemas.scheme import SchemeRecommendationResponse
-from app.schemas.dss import DSSQueryRequest, DSSQueryResponse, VillageConvergenceSummary
-from app.services.dss_service import run_dss_for_claim, calculate_village_convergence, answer_dss_query
+from app.schemas.dss import (
+    DSSQueryRequest, 
+    DSSQueryResponse, 
+    DSSChatRequest, 
+    DSSChatResponse, 
+    VillageConvergenceSummary
+)
+from app.services.dss_service import (
+    run_dss_for_claim, 
+    calculate_village_convergence, 
+    answer_dss_query,
+    chat_dss_query
+)
 from app.services.rag_service import process_and_index_pdf
 from app.services.audit_service import record_audit
 
 router = APIRouter(prefix="/dss", tags=["Decision Support System & RAG"])
+
+@router.post("/chat", response_model=DSSChatResponse)
+def execute_dss_chat(
+    req: DSSChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Conversational AI Decision Support Assistant powered by Groq LLM.
+    Synthesizes live PostGIS claim geometries, Copernicus Sentinel-2 remote sensing indices
+    (crop NDVI, canopy cover, water NDWI deficit), statutory scheme eligibility rules, and grounded RAG citations.
+    """
+    return chat_dss_query(db, req)
 
 @router.post("/query", response_model=DSSQueryResponse)
 def execute_dss_query(
@@ -22,9 +46,7 @@ def execute_dss_query(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Unified AI & Rules-Based Decision Support Query Engine.
-    Answers natural language inquiries using claim spatial context, remote-sensing data,
-    deterministic eligibility rules, and grounded RAG citations from official policy PDFs.
+    Unified AI & Rules-Based Decision Support Query Engine (Legacy Single-Turn).
     """
     return answer_dss_query(db, req)
 

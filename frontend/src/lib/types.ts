@@ -139,6 +139,78 @@ export interface DocumentData {
   created_at?: string;
 }
 
+export interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp?: string;
+  model_used?: string;
+}
+
+export interface SatelliteTelemetry {
+  crop_pct: number;
+  forest_pct: number;
+  water_pct: number;
+  building_pct: number;
+  bare_pct: number;
+  mean_ndvi?: number;
+  mean_ndwi?: number;
+  assets_detected: string[];
+  parcel_area_ha?: number;
+  claim_type?: string;
+  water_deficit: boolean;
+}
+
+export interface RAGCitation {
+  document_name: string;
+  scheme_code?: string;
+  page_number: number;
+  section_title?: string;
+  excerpt: string;
+  similarity_score: number;
+}
+
+export interface DSSChatRequest {
+  query?: string;
+  messages?: ChatMessage[];
+  claim_id?: number;
+  scheme_code?: string;
+  village?: string;
+  district?: string;
+}
+
+export interface DSSChatResponse {
+  message: ChatMessage;
+  context_type: string;
+  claim_context?: {
+    id: number;
+    claim_id: string;
+    applicant_name: string;
+    father_or_husband_name?: string;
+    village: string;
+    district: string;
+    state: string;
+    claim_type: string;
+    area_claimed: number;
+    status: string;
+    verification_status: string;
+    land_use?: string;
+  };
+  satellite_telemetry?: SatelliteTelemetry;
+  recommendations: SchemeRecommendation[];
+  citations: RAGCitation[];
+  suggested_followups: string[];
+  statistics?: Record<string, any>;
+}
+
+export interface DSSQueryResponse {
+  query: string;
+  answer: string;
+  context_type: string;
+  recommendations?: SchemeRecommendation[];
+  citations: RAGCitation[];
+  statistics?: Record<string, any>;
+}
+
 export interface VillageConvergence {
   village: string;
   district: string;
@@ -209,3 +281,52 @@ export interface AtlasStatistics {
     by_status: { status: string; count: number }[];
   };
 }
+
+export interface IndexStats {
+  min: number;
+  max: number;
+  mean: number;
+  median?: number;
+  std_dev?: number;
+  valid_pixel_count: number;
+}
+
+export interface LandCharacteristics {
+  vegetation_area_percentage: number;
+  water_area_percentage: number;
+  builtup_area_percentage: number;
+}
+
+export interface SentinelLayerMetadata {
+  satellite_source: string;
+  platform?: string;
+  acquisition_date: string;
+  cloud_coverage_percentage: number;
+  processing_date: string;
+  resolution_meters: number;
+  bands_used: string[];
+  cloud_masking_applied: boolean;
+  masked_scl_classes: string[];
+  parcel_area_hectares?: number;
+  bounds?: [number, number, number, number];
+}
+
+export interface SentinelStatisticsResponse {
+  claim_id: string;
+  parcel_id: number;
+  ndvi: IndexStats;
+  ndwi: IndexStats;
+  ndbi: IndexStats;
+  land_characteristics: LandCharacteristics;
+  metadata: SentinelLayerMetadata;
+}
+
+export interface SentinelLayerResponse {
+  claim_id: string;
+  parcel_id: number;
+  layer_type: string;
+  layer_name: string;
+  image_url: string;
+  metadata: SentinelLayerMetadata;
+}
+

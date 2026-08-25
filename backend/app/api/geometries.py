@@ -61,11 +61,19 @@ def get_all_geometries(
         stats_dict = {}
         sat_date = None
         mean_ndvi = None
+        mean_ndwi = None
+        mean_ndbi = None
+        cloud_pct = None
         if sat:
             sat_date = sat.acquisition_date
             mean_ndvi = sat.mean_ndvi
+            mean_ndwi = sat.mean_ndwi
+            mean_ndbi = sat.mean_ndbi
+            cloud_pct = sat.cloud_percentage
             st_records = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == sat.id).all()
             stats_dict = {s.class_name: s.percentage for s in st_records}
+
+        bbox_coords = json.loads(geom.bbox) if geom.bbox else None
 
         properties = {
             "geometry_id": geom.id,
@@ -89,6 +97,10 @@ def get_all_geometries(
             "geometry_source": geom.geometry_source,
             "satellite_date": sat_date,
             "mean_ndvi": mean_ndvi,
+            "mean_ndwi": mean_ndwi,
+            "mean_ndbi": mean_ndbi,
+            "cloud_percentage": cloud_pct,
+            "bbox": bbox_coords,
             "forest_percentage": stats_dict.get("forest", 0.0),
             "crop_percentage": stats_dict.get("crop", 0.0),
             "water_percentage": stats_dict.get("water", 0.0),

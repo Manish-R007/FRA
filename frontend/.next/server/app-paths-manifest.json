@@ -1,9 +1,9 @@
 {
-  "/claims/[id]/page": "app/claims/[id]/page.js",
-  "/claims/page": "app/claims/page.js",
-  "/atlas/page": "app/atlas/page.js",
-  "/documents/verify/[id]/page": "app/documents/verify/[id]/page.js",
+  "/page": "app/page.js",
   "/dss/page": "app/dss/page.js",
-  "/audit/page": "app/audit/page.js",
-  "/schemes/page": "app/schemes/page.js"
+  "/claims/page": "app/claims/page.js",
+  "/claims/[id]/page": "app/claims/[id]/page.js",
+  "/atlas/page": "app/atlas/page.js",
+  "/schemes/page": "app/schemes/page.js",
+  "/audit/page": "app/audit/page.js"
 }

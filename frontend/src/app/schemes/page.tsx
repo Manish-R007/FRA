@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { 
   Layers, 
   Award, 
@@ -10,7 +11,9 @@ import {
   Plus, 
   ChevronRight,
   ShieldCheck,
-  Building
+  Building,
+  Bot,
+  MessageSquare
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -52,42 +55,55 @@ export default function SchemesPage() {
           </div>
         ) : (
           schemes.map((scheme) => (
-            <div key={scheme.id} className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-slate-700 transition-all">
-              <div className="flex items-start justify-between border-b border-slate-800 pb-3">
-                <div>
-                  <span className="text-[10px] text-emerald-400 font-mono uppercase font-bold tracking-wider block">
-                    {scheme.department}
-                  </span>
-                  <h3 className="text-base font-bold text-white">{scheme.name}</h3>
-                </div>
-                <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
-                  {scheme.code}
-                </span>
-              </div>
-
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {scheme.description}
-              </p>
-
-              {/* Benefits Banner */}
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
-                <strong className="block text-emerald-200 text-[10px] uppercase font-bold tracking-wider">
-                  Entitlement Benefits:
-                </strong>
-                <p className="leading-relaxed">{scheme.benefits}</p>
-              </div>
-
-              {/* Required Documents */}
-              <div className="space-y-1.5 text-xs">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Required Proof Documents:</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {scheme.documents_required?.map((doc: string) => (
-                    <span key={doc} className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-[11px] flex items-center gap-1">
-                      <FileText className="w-3 h-3 text-slate-400" />
-                      {doc}
+            <div key={scheme.id} className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-slate-700 transition-all flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+                  <div>
+                    <span className="text-[10px] text-emerald-400 font-mono uppercase font-bold tracking-wider block">
+                      {scheme.department}
                     </span>
-                  ))}
+                    <h3 className="text-base font-bold text-white">{scheme.name}</h3>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                    {scheme.code}
+                  </span>
                 </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {scheme.description}
+                </p>
+
+                {/* Benefits Banner */}
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
+                  <strong className="block text-emerald-200 text-[10px] uppercase font-bold tracking-wider">
+                    Entitlement Benefits:
+                  </strong>
+                  <p className="leading-relaxed">{scheme.benefits}</p>
+                </div>
+
+                {/* Required Documents */}
+                <div className="space-y-1.5 text-xs">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase block">Required Proof Documents:</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {scheme.documents_required?.map((doc: string) => (
+                      <span key={doc} className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-[11px] flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-slate-400" />
+                        {doc}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ask Chatbot Action */}
+              <div className="pt-2">
+                <Link
+                  href={`/dss?query=${encodeURIComponent(`Explain the statutory eligibility guidelines, satellite verification criteria, and required documents for ${scheme.name} (${scheme.code}) under the Forest Rights Act convergence framework.`)}`}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>Inquire with DSS AI Chatbot</span>
+                </Link>
               </div>
             </div>
           ))
