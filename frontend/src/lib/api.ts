@@ -130,6 +130,47 @@ export const api = {
     return fetchWithAuth(`/analysis/${claimId}`);
   },
 
+  // Copernicus Sentinel Hub (CDSE)
+  getSentinelStatistics: async (
+    parcelId: string | number,
+    params: { start_date?: string; end_date?: string; max_cloud?: number; resolution?: number } = {}
+  ) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return fetchWithAuth(`/sentinel/statistics/${parcelId}${qs ? `?${qs}` : ""}`);
+  },
+  getSentinelLayer: async (
+    parcelId: string | number,
+    layerType: "true-color" | "cir" | "ndvi" | "ndwi" | "ndbi",
+    params: { start_date?: string; end_date?: string; max_cloud?: number; resolution?: number } = {}
+  ) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return fetchWithAuth(`/sentinel/${layerType}/${parcelId}${qs ? `?${qs}` : ""}`);
+  },
+  getSentinelImageUrl: (parcelId: string | number, layerType: string): string => {
+    return `${API_BASE}/sentinel/image/${parcelId}/${layerType}`;
+  },
+  runSentinelProcess: async (
+    parcelId: string | number,
+    params: { start_date?: string; end_date?: string; max_cloud?: number } = {}
+  ) => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) query.append(k, String(v));
+    });
+    const qs = query.toString();
+    return fetchWithAuth(`/sentinel/process/${parcelId}${qs ? `?${qs}` : ""}`, {
+      method: "POST",
+    });
+  },
+
   // Documents & OCR
   uploadDocument: async (file: File, documentType = "FRA_PATTA", claimId?: number): Promise<DocumentData> => {
     const formData = new FormData();

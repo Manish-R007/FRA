@@ -1,0 +1,14 @@
+.venv
+.env
+.env.local
+.env.*.local
+*.pyc
+__pycache__/
+node_modules/
+.next/
+dist/
+build/
+*.db
+*.sqlite
+uploads/
+scratch/

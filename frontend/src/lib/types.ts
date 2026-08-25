@@ -209,3 +209,52 @@ export interface AtlasStatistics {
     by_status: { status: string; count: number }[];
   };
 }
+
+export interface IndexStats {
+  min: number;
+  max: number;
+  mean: number;
+  median?: number;
+  std_dev?: number;
+  valid_pixel_count: number;
+}
+
+export interface LandCharacteristics {
+  vegetation_area_percentage: number;
+  water_area_percentage: number;
+  builtup_area_percentage: number;
+}
+
+export interface SentinelLayerMetadata {
+  satellite_source: string;
+  platform?: string;
+  acquisition_date: string;
+  cloud_coverage_percentage: number;
+  processing_date: string;
+  resolution_meters: number;
+  bands_used: string[];
+  cloud_masking_applied: boolean;
+  masked_scl_classes: string[];
+  parcel_area_hectares?: number;
+  bounds?: [number, number, number, number];
+}
+
+export interface SentinelStatisticsResponse {
+  claim_id: string;
+  parcel_id: number;
+  ndvi: IndexStats;
+  ndwi: IndexStats;
+  ndbi: IndexStats;
+  land_characteristics: LandCharacteristics;
+  metadata: SentinelLayerMetadata;
+}
+
+export interface SentinelLayerResponse {
+  claim_id: string;
+  parcel_id: number;
+  layer_type: string;
+  layer_name: string;
+  image_url: string;
+  metadata: SentinelLayerMetadata;
+}
+

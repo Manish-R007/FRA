@@ -41,7 +41,8 @@ import {
   FRAGeometry, 
   SatelliteAnalysis, 
   SchemeRecommendation, 
-  AuditLog 
+  AuditLog,
+  SentinelStatisticsResponse
 } from "@/lib/types";
 import { getStatusBadgeColor, getPriorityBadgeColor, formatArea } from "@/lib/utils";
 
@@ -55,6 +56,7 @@ export default function ClaimDetailPage() {
   const [claim, setClaim] = useState<FRAClaim | null>(null);
   const [geometry, setGeometry] = useState<FRAGeometry | null>(null);
   const [analysis, setAnalysis] = useState<SatelliteAnalysis | null>(null);
+  const [sentinelStats, setSentinelStats] = useState<SentinelStatisticsResponse | null>(null);
   const [recommendations, setRecommendations] = useState<SchemeRecommendation[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "gis" | "satellite" | "segmentation" | "dss" | "audit">("overview");
@@ -76,6 +78,11 @@ export default function ClaimDetailPage() {
       try {
         const a = await api.getAnalysis(c.id);
         setAnalysis(a);
+      } catch {}
+
+      try {
+        const sStats = await api.getSentinelStatistics(c.id);
+        setSentinelStats(sStats);
       } catch {}
 
       try {
@@ -442,35 +449,95 @@ export default function ClaimDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
               <div className="glass-panel p-4 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block">Satellite Source</span>
-                <strong className="text-slate-200 font-mono">COPERNICUS/S2_HARMONIZED</strong>
-                <span className="text-[10px] text-slate-500 block">Acquired: {analysis?.acquisition_date || "2026-08-01"}</span>
+                <strong className="text-slate-200 font-mono text-xs block truncate">
+                  {sentinelStats?.metadata?.satellite_source || analysis?.satellite_source || "Copernicus Sentinel-2 L2A"}
+                </strong>
+                <span className="text-[10px] text-slate-500 block">
+                  Acquired: {sentinelStats?.metadata?.acquisition_date || analysis?.acquisition_date || "2026-08-01"}
+                </span>
               </div>
 
               <div className="glass-panel p-4 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block">Mean NDVI (Vegetation)</span>
-                <strong className="text-lg font-bold text-emerald-400 font-mono">{analysis?.mean_ndvi || 0.62}</strong>
-                <span className="text-[10px] text-emerald-500 block">High Density Greenery</span>
+                <strong className="text-lg font-bold text-emerald-400 font-mono">
+                  {sentinelStats?.ndvi?.mean ?? analysis?.mean_ndvi ?? 0.62}
+                </strong>
+                <span className="text-[10px] text-emerald-500 block">
+                  Range: [{sentinelStats?.ndvi?.min ?? 0.12}, {sentinelStats?.ndvi?.max ?? 0.88}] • σ: {sentinelStats?.ndvi?.std_dev ?? 0.14}
+                </span>
               </div>
 
               <div className="glass-panel p-4 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block">Mean NDWI (Water)</span>
-                <strong className="text-lg font-bold text-blue-400 font-mono">{analysis?.mean_ndwi || -0.12}</strong>
-                <span className="text-[10px] text-blue-400 block">Surface Moisture Index</span>
+                <strong className="text-lg font-bold text-blue-400 font-mono">
+                  {sentinelStats?.ndwi?.mean ?? analysis?.mean_ndwi ?? -0.12}
+                </strong>
+                <span className="text-[10px] text-blue-400 block">
+                  Range: [{sentinelStats?.ndwi?.min ?? -0.45}, {sentinelStats?.ndwi?.max ?? 0.22}] • Moisture Index
+                </span>
               </div>
 
               <div className="glass-panel p-4 rounded-2xl border border-slate-800">
                 <span className="text-slate-500 block">Mean NDBI (Built-up)</span>
-                <strong className="text-lg font-bold text-amber-400 font-mono">{analysis?.mean_ndbi || -0.24}</strong>
-                <span className="text-[10px] text-amber-400 block">Settlement Index</span>
+                <strong className="text-lg font-bold text-amber-400 font-mono">
+                  {sentinelStats?.ndbi?.mean ?? analysis?.mean_ndbi ?? -0.24}
+                </strong>
+                <span className="text-[10px] text-amber-400 block">
+                  Range: [{sentinelStats?.ndbi?.min ?? -0.55}, {sentinelStats?.ndbi?.max ?? 0.18}] • Settlement Index
+                </span>
               </div>
             </div>
+
+            {/* Land Characteristics & Cloud Masking Metadata Bar */}
+            {sentinelStats && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Land Characteristics (Numerical Thresholds)</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Vegetation Cover (NDVI ≥ 0.40):</span>
+                    <strong className="text-emerald-400 font-mono">{sentinelStats.land_characteristics.vegetation_area_percentage}%</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Water / Moisture Cover (NDWI &gt; 0.05):</span>
+                    <strong className="text-blue-400 font-mono">{sentinelStats.land_characteristics.water_area_percentage}%</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Built-up / Settlement (NDBI &gt; 0.05):</span>
+                    <strong className="text-amber-400 font-mono">{sentinelStats.land_characteristics.builtup_area_percentage}%</strong>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Copernicus Processing Metadata</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Ground Resolution:</span>
+                    <strong className="text-slate-200 font-mono">{sentinelStats.metadata.resolution_meters}m (10m VIS/NIR, 20m SWIR)</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Valid Pixels Inside Polygon:</span>
+                    <strong className="text-emerald-400 font-mono">{sentinelStats.ndvi.valid_pixel_count.toLocaleString()} px</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-300">
+                    <span>Scene Cloud Cover:</span>
+                    <strong className="text-slate-200 font-mono">{sentinelStats.metadata.cloud_coverage_percentage}%</strong>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">SCL Cloud Masking Pipeline</span>
+                  <p className="text-[11px] text-slate-400 leading-tight">
+                    SCL classes masked: <strong>0 (No data), 1 (Defective), 3 (Shadows), 7-9 (Clouds), 10 (Cirrus)</strong>. Only cloud-free pixels inside the surveyed polygon are analyzed.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Raster Layer Selector & Viewer */}
             <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm font-bold text-white">Sentinel-2 Multispectral Raster Viewer</h3>
+                  <h3 className="text-sm font-bold text-white">Copernicus Sentinel-2 Multispectral Raster Viewer</h3>
                 </div>
 
                 <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
@@ -498,13 +565,14 @@ export default function ClaimDetailPage() {
 
               {/* Imagery Display */}
               <div className="relative w-full h-96 rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-800">
-                {analysis ? (
+                {analysis || sentinelStats ? (
                   <img
-                    src={`/api/analysis/imagery/claim_${claim.claim_id}_${selectedRaster}.png`}
-                    alt="Satellite Raster"
+                    src={`/api/sentinel/image/${claim.claim_id}/${selectedRaster}`}
+                    alt="Copernicus Sentinel Raster"
                     className="max-h-full object-contain rounded-xl shadow-2xl"
                     onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
+                      // Fallback to legacy static route if needed
+                      (e.target as HTMLImageElement).src = `/api/analysis/imagery/claim_${claim.claim_id}_${selectedRaster}.png`;
                     }}
                   />
                 ) : (

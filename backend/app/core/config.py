@@ -29,6 +29,24 @@ class Settings(BaseSettings):
     # LLM / Gemini API Key
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", None)
     
+    # Copernicus Sentinel Hub (Copernicus Data Space Ecosystem - CDSE)
+    SENTINEL_HUB_CLIENT_ID: Optional[str] = os.getenv("SENTINEL_HUB_CLIENT_ID", None)
+    SENTINEL_HUB_CLIENT_SECRET: Optional[str] = os.getenv("SENTINEL_HUB_CLIENT_SECRET", None)
+    SENTINEL_HUB_TOKEN_URL: str = os.getenv(
+        "SENTINEL_HUB_TOKEN_URL",
+        "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
+    )
+    SENTINEL_HUB_PROCESS_URL: str = os.getenv(
+        "SENTINEL_HUB_PROCESS_URL",
+        "https://sh.dataspace.copernicus.eu/process/v1"
+    )
+    SENTINEL_HUB_CATALOG_URL: str = os.getenv(
+        "SENTINEL_HUB_CATALOG_URL",
+        "https://sh.dataspace.copernicus.eu/catalog/v1.0"
+    )
+    SENTINEL_HUB_MAX_CLOUD_COVER: float = float(os.getenv("SENTINEL_HUB_MAX_CLOUD_COVER", "20.0"))
+    SENTINEL_HUB_DEFAULT_RESOLUTION: float = float(os.getenv("SENTINEL_HUB_DEFAULT_RESOLUTION", "10.0"))
+
     # Discrepancy threshold percentage
     AREA_DISCREPANCY_THRESHOLD_PERCENT: float = 5.0
     
