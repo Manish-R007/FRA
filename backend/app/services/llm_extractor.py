@@ -177,40 +177,57 @@ async def extract_structured_data(ocr_text: str) -> LLMExtractedDocument:
     Return ONLY the raw JSON object.
     """
 
-    # 1. Primary: Groq API (LLaMA 3.3 70B Versatile)
+    # 1. Primary: Groq API (multi-model fallback)
     if settings.GROQ_API_KEY:
-        try:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": settings.GROQ_MODEL,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are an official Ministry of Tribal Affairs Forest Rights Act document metadata parser. Output strictly valid JSON."
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.1
-            }
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                response = await client.post(url, json=payload, headers=headers)
-                print("response:", response)
-                if response.status_code == 200:
-                    data = response.json()
-                    content = data["choices"][0]["message"]["content"]
-                    clean_json_str = re.sub(r'```(?:json)?', '', content).strip()
-                    parsed = json.loads(clean_json_str)
-                    return LLMExtractedDocument(**parsed)
-        except Exception:
-            pass
+        models_to_try = [
+            settings.GROQ_MODEL,
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.6-27b",
+            "llama-3.3-70b-versatile"
+        ]
+        # Remove duplicates while preserving order
+        unique_models = []
+        for m in models_to_try:
+            if m and m not in unique_models:
+                unique_models.append(m)
+
+        for model_name in unique_models:
+            try:
+                url = "https://api.groq.com/openai/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {settings.GROQ_API_KEY}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": model_name,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are an official Ministry of Tribal Affairs Forest Rights Act document metadata parser. Output strictly valid JSON."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.1
+                }
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    response = await client.post(url, json=payload, headers=headers)
+                    if response.status_code == 200:
+                        data = response.json()
+                        content = data["choices"][0]["message"]["content"]
+                        # Strip thinking tags if generated
+                        clean_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                        clean_json_str = re.sub(r'```(?:json)?', '', clean_content).strip()
+                        # Extract first JSON object
+                        json_match = re.search(r'\{.*\}', clean_json_str, re.DOTALL)
+                        if json_match:
+                            parsed = json.loads(json_match.group(0))
+                            return LLMExtractedDocument(**parsed)
+            except Exception:
+                continue
 
     # 2. Secondary: Gemini API
     if settings.GEMINI_API_KEY:

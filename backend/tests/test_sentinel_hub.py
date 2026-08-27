@@ -90,13 +90,59 @@ def test_sentinel_hub_process_and_compute_parcel():
         assert os.path.exists(fpath), f"Expected raster file {fpath} not found"
 
 
+import json
+from app.core.database import SessionLocal
+from app.models.claim import FRAClaim
+from app.models.geometry import FRAGeometry
+from app.services.gis_service import validate_and_process_geometry
+
+def _ensure_test_claim() -> int:
+    db = SessionLocal()
+    try:
+        claim = db.query(FRAClaim).filter(FRAClaim.claim_id == "FRA-TEST-SENTINEL-001").first()
+        if not claim:
+            claim = FRAClaim(
+                claim_id="FRA-TEST-SENTINEL-001",
+                claim_type="IFR",
+                applicant_name="Test Applicant",
+                village="Test Village",
+                district="Mayurbhanj",
+                state="Odisha",
+                area_claimed=2.4,
+                status="GIS_VALIDATED"
+            )
+            db.add(claim)
+            db.commit()
+            db.refresh(claim)
+
+        geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == claim.id).first()
+        if not geom:
+            geo_proc = validate_and_process_geometry(SAMPLE_POLYGON, claimed_area_hectares=2.4)
+            geom = FRAGeometry(
+                claim_id=claim.id,
+                geometry=json.dumps(SAMPLE_POLYGON),
+                geometry_source="TEST_SAMPLE",
+                calculated_area_m2=geo_proc["calculated_area_m2"],
+                calculated_area_hectares=geo_proc["calculated_area_hectares"],
+                claimed_area_hectares=2.4,
+                centroid=json.dumps(geo_proc["centroid"]),
+                bbox=json.dumps(geo_proc["bbox"]),
+                geometry_status="VALIDATED"
+            )
+            db.add(geom)
+            db.commit()
+            db.refresh(geom)
+        return claim.id
+    finally:
+        db.close()
+
 def test_sentinel_api_statistics_endpoint():
-    """Tests GET /api/sentinel/statistics/{parcel_id} with seeded claim."""
-    # Seeded claim ID 1 is FRA-OD-MAY-001
-    resp = client.get("/api/sentinel/statistics/1")
+    """Tests GET /api/sentinel/statistics/{parcel_id} with test claim."""
+    claim_id = _ensure_test_claim()
+    resp = client.get(f"/api/sentinel/statistics/{claim_id}")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["claim_id"] == "FRA-OD-MAY-001"
+    assert data["claim_id"] == "FRA-TEST-SENTINEL-001"
     assert "ndvi" in data
     assert "ndwi" in data
     assert "ndbi" in data
@@ -107,47 +153,49 @@ def test_sentinel_api_statistics_endpoint():
 
 def test_sentinel_api_layer_endpoints():
     """Tests True Color, CIR, NDVI, NDWI, NDBI endpoints."""
+    claim_id = _ensure_test_claim()
     # 1. True Color
-    resp_rgb = client.get("/api/sentinel/true-color/1")
+    resp_rgb = client.get(f"/api/sentinel/true-color/{claim_id}")
     assert resp_rgb.status_code == 200
     assert resp_rgb.json()["layer_type"] == "true_color"
 
     # 2. CIR
-    resp_cir = client.get("/api/sentinel/cir/1")
+    resp_cir = client.get(f"/api/sentinel/cir/{claim_id}")
     assert resp_cir.status_code == 200
     assert resp_cir.json()["layer_type"] == "cir"
 
     # 3. NDVI
-    resp_ndvi = client.get("/api/sentinel/ndvi/1")
+    resp_ndvi = client.get(f"/api/sentinel/ndvi/{claim_id}")
     assert resp_ndvi.status_code == 200
     assert resp_ndvi.json()["layer_type"] == "ndvi"
 
     # 4. NDWI
-    resp_ndwi = client.get("/api/sentinel/ndwi/1")
+    resp_ndwi = client.get(f"/api/sentinel/ndwi/{claim_id}")
     assert resp_ndwi.status_code == 200
     assert resp_ndwi.json()["layer_type"] == "ndwi"
 
     # 5. NDBI
-    resp_ndbi = client.get("/api/sentinel/ndbi/1")
+    resp_ndbi = client.get(f"/api/sentinel/ndbi/{claim_id}")
     assert resp_ndbi.status_code == 200
     assert resp_ndbi.json()["layer_type"] == "ndbi"
 
     # 6. Direct image serving
-    resp_img = client.get("/api/sentinel/image/1/rgb")
+    resp_img = client.get(f"/api/sentinel/image/{claim_id}/rgb")
     assert resp_img.status_code == 200
     assert resp_img.headers["content-type"] == "image/png"
 
-    resp_img_ndvi = client.get("/api/sentinel/image/1/ndvi")
+    resp_img_ndvi = client.get(f"/api/sentinel/image/{claim_id}/ndvi")
     assert resp_img_ndvi.status_code == 200
     assert resp_img_ndvi.headers["content-type"] == "image/png"
 
 
 def test_sentinel_api_error_handling():
     """Tests error responses for non-existent parcel and invalid layer."""
+    claim_id = _ensure_test_claim()
     # 1. Parcel not found
     resp_404 = client.get("/api/sentinel/statistics/999999")
     assert resp_404.status_code == 404
 
     # 2. Invalid layer image
-    resp_bad_layer = client.get("/api/sentinel/image/1/unknown_layer")
+    resp_bad_layer = client.get(f"/api/sentinel/image/{claim_id}/unknown_layer")
     assert resp_bad_layer.status_code == 400

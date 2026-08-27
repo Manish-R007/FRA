@@ -113,53 +113,17 @@ export default function ClaimDetailPage() {
   const [showAttachModal, setShowAttachModal] = useState(false);
   const [attachingGeo, setAttachingGeo] = useState(false);
 
-  const handleQuickAttachSample = async () => {
-    if (!claim) return;
-    setAttachingGeo(true);
-    try {
-      const sampleGeo = {
-        type: "Polygon",
-        coordinates: [
-          [
-            [86.751200, 21.941500],
-            [86.753800, 21.942900],
-            [86.755100, 21.941200],
-            [86.753900, 21.939800],
-            [86.751800, 21.940100],
-            [86.751200, 21.941500]
-          ]
-        ]
-      };
-      await api.saveGeometry(claim.id, sampleGeo, "FIELD_GPS_SURVEY", claim.survey_number || "PLOT-889/B");
-      await loadData();
-      setShowAttachModal(false);
-      alert("Boundary polygon attached successfully! You can now run Satellite Analysis.");
-    } catch (err: any) {
-      alert(err.message || "Failed to attach geometry");
-    } finally {
-      setAttachingGeo(false);
-    }
-  };
-
   const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !claim) return;
     setAttachingGeo(true);
     try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      let geom = parsed;
-      if (parsed.type === "FeatureCollection" && parsed.features?.[0]?.geometry) {
-        geom = parsed.features[0].geometry;
-      } else if (parsed.type === "Feature" && parsed.geometry) {
-        geom = parsed.geometry;
-      }
-      await api.saveGeometry(claim.id, geom, "GEOJSON_UPLOAD", claim.survey_number || "SURVEY-UPLOAD");
+      await api.uploadGeospatialFile(file, claim.id, "FIELD_SURVEY_UPLOAD");
       await loadData();
       setShowAttachModal(false);
-      alert("Boundary polygon uploaded and validated successfully!");
+      alert("Real boundary polygon uploaded and validated successfully!");
     } catch (err: any) {
-      alert(err.message || "Invalid GeoJSON file format");
+      alert(err.message || "Failed to upload geospatial file. Must be valid GeoJSON or KML.");
     } finally {
       setAttachingGeo(false);
     }
@@ -399,18 +363,10 @@ export default function ClaimDetailPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    onClick={handleQuickAttachSample}
-                    disabled={attachingGeo}
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/40"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>{attachingGeo ? "Attaching..." : "Attach Sample Survey Polygon (Baripada 2.78 Ha)"}</span>
-                  </button>
-                  <label className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-emerald-400" />
-                    <span>Upload Custom GeoJSON</span>
-                    <input type="file" accept=".geojson,.json" onChange={handleFileAttach} className="hidden" />
+                  <label className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-105">
+                    <MapPin className="w-4 h-4 text-white" />
+                    <span>Upload Real Boundary Polygon (.geojson, .kml)</span>
+                    <input type="file" accept=".geojson,.json,.kml" onChange={handleFileAttach} className="hidden" />
                   </label>
                 </div>
               </div>
@@ -837,20 +793,17 @@ export default function ClaimDetailPage() {
             </p>
 
             <div className="space-y-3 pt-2">
-              <button
-                onClick={handleQuickAttachSample}
-                disabled={attachingGeo}
-                className="w-full py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{attachingGeo ? "Attaching..." : "1-Click Attach Sample Boundary (Baripada, 2.78 Ha)"}</span>
-              </button>
-
-              <label className="w-full py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold cursor-pointer flex items-center justify-center gap-2 block text-center transition-all">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-                <span>Upload Custom GeoJSON / KML File</span>
+              <label className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-2 block text-center transition-all shadow-lg shadow-emerald-950/40">
+                <MapPin className="w-4 h-4 text-white" />
+                <span>Browse & Upload GeoJSON / KML Boundary</span>
                 <input type="file" accept=".geojson,.json,.kml" onChange={handleFileAttach} className="hidden" />
               </label>
+              {attachingGeo && (
+                <div className="flex items-center justify-center gap-2 text-xs text-emerald-400">
+                  <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Processing and attaching boundary geometry...</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

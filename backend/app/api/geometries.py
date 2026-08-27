@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from app.core.database import get_db
@@ -9,7 +9,7 @@ from app.models.claim import FRAClaim
 from app.models.geometry import FRAGeometry
 from app.models.satellite import SatelliteAnalysis, LandCoverStatistic
 from app.schemas.geometry import FRAGeometryCreate, FRAGeometryUpdate, FRAGeometryResponse, GeoJSONFeatureCollection, GeoJSONFeature
-from app.services.gis_service import validate_and_process_geometry
+from app.services.gis_service import validate_and_process_geometry, parse_geospatial_features
 from app.services.audit_service import record_audit
 
 router = APIRouter(prefix="/geometries", tags=["GIS & Geometries"])
@@ -230,3 +230,157 @@ def delete_geometry(geom_id: int, db: Session = Depends(get_db), current_user: U
     db.commit()
     record_audit(db, action="DELETE_GEOMETRY", entity="FRAGeometry", entity_id=str(geom_id), user_id=current_user.id, old_value={"id": geom_id})
     return {"message": "Geometry deleted successfully"}
+
+@router.post("/upload-file", status_code=status.HTTP_201_CREATED)
+async def upload_geospatial_file(
+    file: UploadFile = File(...),
+    claim_id: Optional[int] = Form(None),
+    geometry_source: str = Form("GEOJSON_UPLOAD"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER", "ANALYST"]))
+):
+    """
+    Parses and stores real-time geospatial boundaries from .geojson, .json, or .kml files.
+    - If claim_id is given, attaches the geometry to the specified claim.
+    - If no claim_id is given, parses all features (single or multi-parcel), auto-creating claims
+      using feature properties if needed, and stores geodesic boundaries for all parcels.
+    """
+    try:
+        content_bytes = await file.read()
+        content = content_bytes.decode("utf-8", errors="ignore")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read uploaded file: {str(e)}")
+
+    try:
+        features = parse_geospatial_features(content, file.filename)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Geospatial parsing failed: {str(e)}")
+
+    processed_records = []
+    errors = []
+
+    # Case A: Specific claim_id target
+    if claim_id:
+        target_claim = db.query(FRAClaim).filter(FRAClaim.id == claim_id).first()
+        if not target_claim:
+            raise HTTPException(status_code=404, detail="Specified target FRA claim not found")
+
+        first_geom = features[0]["geometry"]
+        try:
+            geo_proc = validate_and_process_geometry(first_geom, claimed_area_hectares=target_claim.area_claimed)
+            existing_geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == target_claim.id).first()
+            if existing_geom:
+                existing_geom.geometry = json.dumps(geo_proc["geometry"])
+                existing_geom.geometry_source = geometry_source
+                existing_geom.calculated_area_m2 = geo_proc["calculated_area_m2"]
+                existing_geom.calculated_area_hectares = geo_proc["calculated_area_hectares"]
+                existing_geom.flag_for_review = geo_proc["flag_for_review"]
+                existing_geom.centroid = json.dumps(geo_proc["centroid"])
+                existing_geom.bbox = json.dumps(geo_proc["bbox"])
+                existing_geom.geometry_status = geo_proc["geometry_status"]
+                geom_rec = existing_geom
+            else:
+                geom_rec = FRAGeometry(
+                    claim_id=target_claim.id,
+                    geometry=json.dumps(geo_proc["geometry"]),
+                    geometry_source=geometry_source,
+                    survey_reference=target_claim.survey_number or f"SURV-{target_claim.claim_id}",
+                    calculated_area_m2=geo_proc["calculated_area_m2"],
+                    calculated_area_hectares=geo_proc["calculated_area_hectares"],
+                    claimed_area_hectares=geo_proc["claimed_area_hectares"],
+                    area_difference_percentage=geo_proc["area_difference_percentage"],
+                    flag_for_review=geo_proc["flag_for_review"],
+                    centroid=json.dumps(geo_proc["centroid"]),
+                    bbox=json.dumps(geo_proc["bbox"]),
+                    geometry_status=geo_proc["geometry_status"]
+                )
+                db.add(geom_rec)
+            
+            if target_claim.status in ["UPLOADED", "OCR_PROCESSED", "PENDING_VERIFICATION"]:
+                target_claim.status = "GIS_VALIDATED"
+
+            db.commit()
+            record_audit(db, action="ATTACH_GEOMETRY_FILE", entity="FRAGeometry", entity_id=str(geom_rec.id or target_claim.id), user_id=current_user.id, new_value={"claim_id": target_claim.claim_id, "calculated_ha": geo_proc["calculated_area_hectares"]})
+            processed_records.append({"claim_id": target_claim.claim_id, "area_ha": geo_proc["calculated_area_hectares"]})
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Geometry validation failed: {str(e)}")
+
+    # Case B: Multi-feature or feature-collection upload
+    else:
+        for idx, feat in enumerate(features):
+            try:
+                geom = feat.get("geometry")
+                props = feat.get("properties", {})
+                if not geom:
+                    continue
+
+                claim_id_code = props.get("claim_id") or f"FRA-GEN-{int(db.query(FRAClaim).count()) + idx + 1:04d}"
+                claim = db.query(FRAClaim).filter(FRAClaim.claim_id == claim_id_code).first()
+
+                if not claim:
+                    claimed_area = float(props.get("area_claimed") or props.get("area") or 1.5)
+                    claim = FRAClaim(
+                        claim_id=claim_id_code,
+                        claim_type=props.get("claim_type", "IFR"),
+                        applicant_name=props.get("applicant_name", f"Beneficiary {claim_id_code}"),
+                        father_or_husband_name=props.get("father_or_husband_name") or props.get("father_name"),
+                        village=props.get("village", "Village Area"),
+                        block=props.get("block"),
+                        district=props.get("district", "District Area"),
+                        state=props.get("state", "State"),
+                        survey_number=props.get("survey_number"),
+                        area_claimed=claimed_area,
+                        area_unit=props.get("area_unit", "hectares"),
+                        land_use=props.get("land_use", "Traditional Agriculture & Homestead"),
+                        status="GIS_VALIDATED",
+                        verification_status="UNVERIFIED",
+                        created_by=current_user.id
+                    )
+                    db.add(claim)
+                    db.commit()
+                    db.refresh(claim)
+
+                geo_proc = validate_and_process_geometry(geom, claimed_area_hectares=claim.area_claimed)
+                existing_geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == claim.id).first()
+
+                if existing_geom:
+                    existing_geom.geometry = json.dumps(geo_proc["geometry"])
+                    existing_geom.geometry_source = geometry_source
+                    existing_geom.calculated_area_m2 = geo_proc["calculated_area_m2"]
+                    existing_geom.calculated_area_hectares = geo_proc["calculated_area_hectares"]
+                    existing_geom.flag_for_review = geo_proc["flag_for_review"]
+                    existing_geom.centroid = json.dumps(geo_proc["centroid"])
+                    existing_geom.bbox = json.dumps(geo_proc["bbox"])
+                    existing_geom.geometry_status = geo_proc["geometry_status"]
+                else:
+                    new_geom = FRAGeometry(
+                        claim_id=claim.id,
+                        geometry=json.dumps(geo_proc["geometry"]),
+                        geometry_source=geometry_source,
+                        survey_reference=props.get("survey_number") or f"SURV-{claim.claim_id}",
+                        calculated_area_m2=geo_proc["calculated_area_m2"],
+                        calculated_area_hectares=geo_proc["calculated_area_hectares"],
+                        claimed_area_hectares=geo_proc["claimed_area_hectares"],
+                        area_difference_percentage=geo_proc["area_difference_percentage"],
+                        flag_for_review=geo_proc["flag_for_review"],
+                        centroid=json.dumps(geo_proc["centroid"]),
+                        bbox=json.dumps(geo_proc["bbox"]),
+                        geometry_status=geo_proc["geometry_status"]
+                    )
+                    db.add(new_geom)
+
+                if claim.status in ["UPLOADED", "OCR_PROCESSED", "PENDING_VERIFICATION"]:
+                    claim.status = "GIS_VALIDATED"
+
+                db.commit()
+                processed_records.append({"claim_id": claim.claim_id, "area_ha": geo_proc["calculated_area_hectares"]})
+            except Exception as e:
+                errors.append({"index": idx, "error": str(e)})
+
+    return {
+        "status": "success",
+        "message": f"Successfully processed {len(processed_records)} parcel boundaries.",
+        "processed_count": len(processed_records),
+        "parcels": processed_records,
+        "errors": errors
+    }

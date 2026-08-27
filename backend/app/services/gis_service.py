@@ -142,3 +142,40 @@ def parse_geojson_file(content: str) -> Dict[str, Any]:
         return data
     else:
         raise ValueError(f"Unrecognized GeoJSON structure: {data.get('type')}")
+
+def parse_geospatial_features(content: str, filename: str = "") -> List[Dict[str, Any]]:
+    """
+    Parses a GeoJSON or KML string and returns a list of parsed features:
+    [{"geometry": {...}, "properties": {...}}, ...]
+    Supports single features or multi-feature collections with rich claim properties.
+    """
+    ext = filename.lower()
+    if ext.endswith(".kml") or "<kml" in content.lower():
+        geom = parse_kml_to_geojson(content)
+        return [{"geometry": geom, "properties": {}}]
+
+    data = json.loads(content)
+    if data.get("type") == "FeatureCollection":
+        features = []
+        for f in data.get("features", []):
+            if f.get("geometry"):
+                features.append({
+                    "geometry": f.get("geometry"),
+                    "properties": f.get("properties", {})
+                })
+        if not features:
+            raise ValueError("GeoJSON FeatureCollection contains no valid features with geometry.")
+        return features
+    elif data.get("type") == "Feature":
+        return [{
+            "geometry": data.get("geometry"),
+            "properties": data.get("properties", {})
+        }]
+    elif data.get("type") in ["Polygon", "MultiPolygon"]:
+        return [{
+            "geometry": data,
+            "properties": {}
+        }]
+    else:
+        raise ValueError(f"Unrecognized GeoJSON structure: {data.get('type')}")
+
