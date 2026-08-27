@@ -48,27 +48,27 @@ const SAMPLE_PROMPTS = [
   {
     category: "Claim Eligibility & Multi-Scheme Convergence",
     icon: Award,
-    query: "What schemes is Birsa Munda eligible for and why? Explain using satellite data.",
+    query: "What central and state welfare schemes are eligible FRA title holders entitled to under statutory rules?",
   },
   {
     category: "Satellite Indices & Irrigation Scarcity",
     icon: Droplets,
-    query: "Why did Sentinel-2 detect a water deficit on claim FRA-OD-MAY-001, and how does PMKSY solve it?",
+    query: "How do Copernicus Sentinel-2 NDRE/NDWI indices evaluate agricultural vitality and water scarcity for PMKSY?",
   },
   {
     category: "Eligibility Gaps & Actionable Next Steps",
     icon: HelpCircle,
-    query: "How can claimant Sukru Oraon become fully eligible for PM-KISAN and Van Dhan Yojana?",
+    query: "What documentation or cadastral requirements are needed for an IFR Patta holder to receive PM-KISAN benefits?",
   },
   {
     category: "Minor Forest Produce & Van Dhan SHGs",
     icon: Trees,
-    query: "Which villages have high forest canopy (>35%) for setting up Van Dhan Vikas Kendra enterprise clusters?",
+    query: "Which forest resource criteria determine eligibility for setting up a Van Dhan Vikas Kendra (VDVK) cluster?",
   },
   {
-    category: "District Welfare Prioritization",
+    category: "Scheme Prioritization & Rules",
     icon: MapPin,
-    query: "Which villages in Mayurbhanj district face critical water deficits and need micro-irrigation convergence?",
+    query: "Summarize the convergence guidelines for PMAY-Gramin, PM-KISAN, and MGNREGA land levelling on FRA land.",
   },
 ];
 

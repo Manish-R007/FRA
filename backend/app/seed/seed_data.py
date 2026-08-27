@@ -19,17 +19,23 @@ from app.services.rag_service import process_and_index_pdf
 from app.services.audit_service import record_audit
 from app.seed.realistic_claims import REALISTIC_CLAIMS_DATA, SCHEMES_DATA
 
-def seed_database():
+def seed_system_essentials(db: Session = None):
     """
-    Populates database with complete, authentic production-ready initial dataset.
+    Seeds essential system prerequisites:
+    1. RBAC Users (Admin, State Officer, District Officer, Field Officer, Analyst, Citizen)
+    2. Official Government Welfare Schemes (PM-KISAN, PMKSY, VDVY, PMAY-G, etc.)
+    3. RAG Policy Guidelines for the Decision Support System
+    Does NOT seed dummy claims or polygons.
     """
-    print("--- Initializing Database Tables ---")
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    should_close = False
+    if db is None:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        should_close = True
 
     try:
         # 1. Seed Users (All 6 RBAC roles)
-        print("1. Seeding Users (RBAC)...")
+        print("1. Initializing RBAC System Users...")
         users_to_create = [
             {
                 "full_name": "Dr. Rajesh Kumar Meena",
@@ -58,17 +64,17 @@ def seed_database():
                 "role": "DISTRICT_OFFICER",
                 "state": "Odisha",
                 "district": "Mayurbhanj",
-                "village": "Baripada Collectorate",
+                "village": "District Collectorate",
                 "is_active": True
             },
             {
-                "full_name": "Shri Debendra Majhi",
+                "full_name": "Field Officer Unit",
                 "email": "field.officer@fra.gov.in",
                 "password_hash": get_password_hash("Field@2025!"),
                 "role": "FIELD_OFFICER",
                 "state": "Odisha",
                 "district": "Mayurbhanj",
-                "village": "Baripada Sadar",
+                "village": "Field Office",
                 "is_active": True
             },
             {
@@ -82,13 +88,13 @@ def seed_database():
                 "is_active": True
             },
             {
-                "full_name": "Birsa Munda (Beneficiary)",
+                "full_name": "Citizen User",
                 "email": "citizen@fra.gov.in",
                 "password_hash": get_password_hash("Citizen@2025!"),
                 "role": "CITIZEN",
                 "state": "Odisha",
                 "district": "Mayurbhanj",
-                "village": "Baripada",
+                "village": "Village Area",
                 "is_active": True
             }
         ]
@@ -102,10 +108,10 @@ def seed_database():
                 db.refresh(user)
                 record_audit(db, action="CREATE_USER", entity="User", entity_id=str(user.id), user_id=None, new_value={"email": user.email, "role": user.role})
 
-        admin_user = db.query(User).filter(User.email == "admin@fra.gov.in").first()
+        admin_user = db.query(User).filter(User.role == "ADMIN").first()
 
         # 2. Seed Schemes
-        print("2. Seeding Government Welfare Schemes...")
+        print("2. Initializing Government Welfare Schemes Catalog...")
         for s_data in SCHEMES_DATA:
             existing_scheme = db.query(Scheme).filter(Scheme.code == s_data["code"]).first()
             if not existing_scheme:
@@ -125,7 +131,7 @@ def seed_database():
                 record_audit(db, action="CREATE_SCHEME", entity="Scheme", entity_id=str(scheme.id), user_id=admin_user.id if admin_user else None, new_value={"code": scheme.code, "name": scheme.name})
 
         # 3. Seed Policy Guidelines into RAG Document Repository
-        print("3. Seeding RAG Policy Guidelines...")
+        print("3. Initializing RAG Policy Guidelines...")
         sample_policy_texts = [
             (
                 "PM-KISAN Convergence with Forest Rights Act Patta Holders Guidelines (MoTA & MoA 2024)",
@@ -175,8 +181,23 @@ def seed_database():
                 db.add(chunk)
                 db.commit()
 
-        # 4. Seed Realistic Claims with Real Polygons & Satellite Analysis
-        print("4. Seeding Realistic Claims, Polygons, and Satellite Remote Sensing...")
+        print("--- System Essentials Initialized Successfully (0 Claims) ---")
+    finally:
+        if should_close:
+            db.close()
+
+def seed_sample_claims(db: Session = None):
+    """
+    Optional helper to seed sample demonstration claims.
+    """
+    should_close = False
+    if db is None:
+        db = SessionLocal()
+        should_close = True
+
+    try:
+        admin_user = db.query(User).filter(User.role == "ADMIN").first()
+        print("Seeding Sample Claims...")
         for c_data in REALISTIC_CLAIMS_DATA:
             existing_claim = db.query(FRAClaim).filter(FRAClaim.claim_id == c_data["claim_id"]).first()
             if not existing_claim:
@@ -205,9 +226,6 @@ def seed_database():
                 db.commit()
                 db.refresh(claim)
 
-                record_audit(db, action="CREATE_CLAIM", entity="FRAClaim", entity_id=str(claim.id), user_id=admin_user.id if admin_user else None, new_value={"claim_id": claim.claim_id, "applicant": claim.applicant_name})
-
-                # Attach actual polygon boundary
                 poly_geom = {
                     "type": "Polygon",
                     "coordinates": c_data["polygon_coordinates"]
@@ -232,49 +250,7 @@ def seed_database():
                 db.commit()
                 db.refresh(fra_geom)
 
-                record_audit(db, action="ATTACH_GEOMETRY", entity="FRAGeometry", entity_id=str(fra_geom.id), user_id=admin_user.id if admin_user else None, new_value={"area_ha": fra_geom.calculated_area_hectares, "discrepancy_pct": fra_geom.area_difference_percentage})
-
-                # Attach Sample Document
-                doc = Document(
-                    claim_id=claim.id,
-                    file_name=f"patta_{claim.claim_id.lower().replace('-', '_')}.pdf",
-                    file_url=f"/uploads/documents/patta_{claim.claim_id.lower().replace('-', '_')}.pdf",
-                    document_type="FRA_PATTA",
-                    ocr_text=f"MINISTRY OF TRIBAL AFFAIRS - FOREST RIGHTS ACT 2006\nTitle of Forest Land under Section 3(1)(a)\nClaim ID: {claim.claim_id}\nName of Title Holder: {claim.applicant_name}\nFather/Husband: {claim.father_or_husband_name}\nVillage: {claim.village}, Block: {claim.block}, District: {claim.district}, State: {claim.state}\nClaim Category: {claim.claim_type}\nExtent of Land: {claim.area_claimed} Hectares\nSurvey/Plot No: {claim.survey_number}\nStatus: Verified and Recorded.",
-                    ocr_confidence=0.94,
-                    processing_status="COMPLETED",
-                    uploaded_by=admin_user.id if admin_user else None
-                )
-                db.add(doc)
-                db.commit()
-                db.refresh(doc)
-
-                # Seed Document Fields
-                fields = [
-                    ("claim_id", claim.claim_id, 0.98),
-                    ("applicant_name", claim.applicant_name, 0.95),
-                    ("father_name", claim.father_or_husband_name or "", 0.92),
-                    ("village", claim.village, 0.96),
-                    ("district", claim.district, 0.97),
-                    ("state", claim.state, 0.99),
-                    ("claim_type", claim.claim_type, 0.96),
-                    ("area", str(claim.area_claimed), 0.94),
-                    ("survey_number", claim.survey_number or "", 0.91),
-                ]
-                for f_name, f_val, f_conf in fields:
-                    df = DocumentField(
-                        document_id=doc.id,
-                        field_name=f_name,
-                        field_value=f_val,
-                        confidence=f_conf,
-                        source="OCR_LLM"
-                    )
-                    db.add(df)
-                db.commit()
-
-                # Run Remote Sensing & AI Segmentation
                 sat_res = process_satellite_analysis(claim_id=claim.claim_id, geojson_geom=geo_proc["geometry"])
-                
                 sat_analysis = SatelliteAnalysis(
                     claim_id=claim.id,
                     geometry_id=fra_geom.id,
@@ -298,13 +274,11 @@ def seed_database():
                 db.commit()
                 db.refresh(sat_analysis)
 
-                # Segment land cover
                 seg_mask, stats_list = perform_semantic_segmentation(
                     bands=sat_res["bands"],
                     indices=sat_res["indices"],
                     total_area_m2=geo_proc["calculated_area_m2"]
                 )
-
                 for st in stats_list:
                     stat_rec = LandCoverStatistic(
                         analysis_id=sat_analysis.id,
@@ -318,13 +292,11 @@ def seed_database():
                     db.add(stat_rec)
                 db.commit()
 
-                # Extract Assets
                 detected_assets = extract_detected_assets(
                     geojson_geom=geo_proc["geometry"],
                     seg_mask=seg_mask,
                     statistics=stats_list
                 )
-
                 for ast in detected_assets:
                     asset_rec = Asset(
                         claim_id=claim.id,
@@ -338,15 +310,19 @@ def seed_database():
                     db.add(asset_rec)
                 db.commit()
 
-                # Run DSS Evaluator
                 run_dss_for_claim(db=db, claim_id=claim.id)
-
-                record_audit(db, action="RUN_SATELLITE_AND_DSS", entity="SatelliteAnalysis", entity_id=str(sat_analysis.id), user_id=admin_user.id if admin_user else None, new_value={"mean_ndvi": sat_analysis.mean_ndvi, "analysis_id": sat_analysis.id})
-
-        print("--- Database Seeding Complete & Verified Successfully! ---")
-
     finally:
-        db.close()
+        if should_close:
+            db.close()
+
+def seed_database(include_samples: bool = False):
+    """
+    Main database initializer.
+    By default, sets up a pristine production database (Users, Schemes, Policy RAG documents) without dummy claims.
+    """
+    seed_system_essentials()
+    if include_samples:
+        seed_sample_claims()
 
 if __name__ == "__main__":
-    seed_database()
+    seed_database(include_samples=False)

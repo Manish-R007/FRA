@@ -94,6 +94,17 @@ export const api = {
       method: "PATCH",
     });
   },
+  purgeData: async (): Promise<{ status: string; message: string; purged_count: number }> => {
+    return fetchWithAuth("/claims/purge-data", {
+      method: "POST",
+    });
+  },
+  bulkUploadClaims: async (payload: any): Promise<any> => {
+    return fetchWithAuth("/claims/bulk-upload", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
 
   // Geometries
   getGeometries: async (params: Record<string, any> = {}): Promise<any> => {
@@ -116,6 +127,17 @@ export const api = {
         geometry_source: source,
         survey_reference: surveyRef,
       }),
+    });
+  },
+  uploadGeospatialFile: async (file: File, claimId?: number, source = "GEOJSON_UPLOAD"): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (claimId) formData.append("claim_id", String(claimId));
+    formData.append("geometry_source", source);
+
+    return fetchWithAuth("/geometries/upload-file", {
+      method: "POST",
+      body: formData,
     });
   },
 

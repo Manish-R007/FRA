@@ -25,7 +25,7 @@ async def upload_document(
     document_type: str = Form("FRA_PATTA"),
     claim_id: Optional[int] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER"]))
+    current_user: User = Depends(get_current_user)
 ):
     # 1. Validate file extension
     ext = os.path.splitext(file.filename)[1].lower()
@@ -134,7 +134,7 @@ def verify_document(
     document_id: int,
     verify_req: DocumentVerificationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER"]))
+    current_user: User = Depends(get_current_user)
 ):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:

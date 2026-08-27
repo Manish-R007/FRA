@@ -45,20 +45,21 @@ app.include_router(stats.router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 def startup_event():
-    """Checks database state on startup and seeds if clean."""
+    """Checks database state on startup and initializes system essentials (Users, Schemes, RAG docs) if clean."""
     db = SessionLocal()
     try:
         user_count = db.query(User).count()
         if user_count == 0:
-            print("Clean database detected on startup. Initializing seeds...")
-            from app.seed.seed_data import seed_database
-            seed_database()
+            print("Clean database detected on startup. Initializing system essentials (0 Claims)...")
+            from app.seed.seed_data import seed_system_essentials
+            seed_system_essentials(db)
     except Exception as e:
         print(f"Startup check warning: {e}")
     finally:
         db.close()
 
 @app.get("/health", tags=["Health"])
+@app.get("/api/health", tags=["Health"])
 def health_check():
     return {
         "status": "healthy",

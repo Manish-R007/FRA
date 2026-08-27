@@ -98,7 +98,7 @@ def perform_ocr(file_path: str) -> Dict[str, Any]:
         pass
         
     return {
-        "text": "FOREST RIGHTS ACT 2006 (PATTA)\nClaim ID: FRA-OD-MAY-001\nApplicant: Birsa Munda\nFather/Husband: Sanatan Munda\nVillage: Baripada, District: Mayurbhanj, State: Odisha\nClaim Type: IFR (Individual Forest Rights)\nClaimed Area: 2.40 Hectares\nSurvey Number: SY-104/2B\nLand Use: Traditional Agriculture & Homestead\nDate of Application: 12/04/2023",
-        "confidence": 0.92,
-        "method": "FALLBACK_PREPROCESSOR"
+        "text": "",
+        "confidence": 0.0,
+        "method": "NO_TEXT_EXTRACTED"
     }

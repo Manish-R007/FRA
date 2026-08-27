@@ -114,7 +114,9 @@ export default function HomePage() {
               <strong className="text-2xl font-bold text-white block">
                 {stats?.summary.total_claims || 0}
               </strong>
-              <span className="text-[11px] text-slate-500">Across 4 States</span>
+              <span className="text-[11px] text-slate-500">
+                {stats?.summary.states_covered ? `Across ${stats.summary.states_covered} State${stats.summary.states_covered > 1 ? 's' : ''}` : "Live Registry"}
+              </span>
             </div>
 
             <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
@@ -172,6 +174,30 @@ export default function HomePage() {
 
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
+        {/* Clean State Welcome Banner if 0 claims */}
+        {stats && stats.summary.total_claims === 0 && !loading && (
+          <div className="glass-panel-glow p-6 rounded-3xl border border-emerald-500/30 bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="text-xs font-mono text-emerald-400 uppercase font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Database Ready For Real-Time Upload
+              </span>
+              <h3 className="text-base font-bold text-white">Upload Your First Real FRA Claim or Geospatial Cadastral Dataset</h3>
+              <p className="text-xs text-slate-300">
+                You can upload Patta documents (PDF/JPG) for instant OCR & AI schema extraction, or import GeoJSON/KML boundary maps.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/claims"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Go to Claims Registry</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Interactive WebGIS Live Preview */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
@@ -208,26 +234,32 @@ export default function HomePage() {
             </div>
 
             <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={landUseData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {landUseData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={LAND_USE_COLORS[index % LAND_USE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "12px", fontSize: "12px" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {landUseData.some(d => d.value > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={landUseData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {landUseData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={LAND_USE_COLORS[index % LAND_USE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "12px", fontSize: "12px" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                  No satellite analyzed land cover yet.
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
@@ -251,23 +283,32 @@ export default function HomePage() {
             </div>
 
             <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats?.charts.by_state || []}>
-                  <XAxis dataKey="state" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "12px", fontSize: "12px" }}
-                  />
-                  <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {(stats?.charts.by_state || []).length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats?.charts.by_state || []}>
+                    <XAxis dataKey="state" stroke="#64748b" fontSize={12} />
+                    <YAxis stroke="#64748b" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", borderRadius: "12px", fontSize: "12px" }}
+                    />
+                    <Bar dataKey="count" fill="#10b981" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                  No state distribution data logged yet.
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
-              <span>Odisha: <strong>3 Claims</strong> (Mayurbhanj)</span>
-              <span>Madhya Pradesh: <strong>1 Claim</strong> (Dindori)</span>
-              <span>Maharashtra: <strong>1 Claim</strong> (Gadchiroli)</span>
-              <span>Jharkhand: <strong>1 Claim</strong> (Gumla)</span>
+            <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800 gap-2">
+              {(stats?.charts.by_state || []).length > 0 ? (
+                stats?.charts.by_state.map((s) => (
+                  <span key={s.state}>{s.state}: <strong>{s.count} Claim{s.count > 1 ? 's' : ''}</strong></span>
+                ))
+              ) : (
+                <span className="text-slate-500 italic">State breakdowns will appear dynamically as real FRA claims are uploaded.</span>
+              )}
             </div>
           </div>
         </div>
