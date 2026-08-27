@@ -34,7 +34,7 @@ const ROLE_PRESETS: { role: UserRole; name: string; email: string; desc: string 
 export default function Navbar() {
   const pathname = usePathname();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   useEffect(() => {
@@ -115,52 +115,52 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-slate-200/80 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 shadow-sm backdrop-blur-xl">
       {/* Top Govt of India Header Banner */}
-      <div className="bg-slate-900 text-slate-300 text-xs px-4 py-1 flex items-center justify-between border-b border-slate-800">
-        <div className="flex items-center gap-2">
+      <div className="h-6 bg-slate-950 text-slate-400 text-[10px] px-4 flex items-center justify-between border-b border-slate-800">
+        <div className="flex items-center gap-2 whitespace-nowrap">
           <span className="font-semibold text-amber-400 flex items-center gap-1">
             <Award className="w-3.5 h-3.5" />
             GOVERNMENT OF INDIA
           </span>
           <span className="text-slate-500">|</span>
-          <span>Ministry of Tribal Affairs (MoTA)</span>
+          <span>Ministry of Tribal Affairs</span>
           <span className="text-slate-500">|</span>
-          <span className="text-emerald-400">Smart India Hackathon 2025</span>
+          <span className="hidden sm:inline text-emerald-400">Forest Rights Act, 2006</span>
         </div>
-        <div className="flex items-center gap-4 text-[11px]">
+        <div className="hidden sm:flex items-center gap-3 text-[10px]">
           <span className="inline-flex items-center gap-1 text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Sentinel-2 Live STAC Connected
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            System operational
           </span>
-          <span>SHA-256 Audit: <strong className="text-amber-400">Verified Unbroken</strong></span>
+          <span className="text-slate-500">Secure government workspace</span>
         </div>
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-[68px] flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-900/30 group-hover:scale-105 transition-transform">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-700 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-900/25 group-hover:scale-105 transition-transform">
             <Trees className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
+              <span className="font-bold text-base tracking-tight bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
                 FRA ATLAS AI
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-medium">
-                v2.1 DSS
+              <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-medium">
+                DSS
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-none">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-none">
               Forest Rights Decision Support System
             </p>
           </div>
         </Link>
 
         {/* Primary Nav Links */}
-        <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+        <nav className="hidden xl:flex items-center gap-1 text-sm font-medium">
           <Link
             href="/atlas"
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
@@ -228,7 +228,7 @@ export default function Navbar() {
           <div className="relative">
             <button
               onClick={() => setShowRoleMenu(!showRoleMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 hover:border-emerald-500/40 text-xs transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-emerald-500/40 text-xs transition-all"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">
@@ -273,6 +273,22 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+      <nav className="md:hidden border-t border-slate-200/80 dark:border-slate-800 px-3 h-10 flex items-center gap-1 overflow-x-auto text-[11px] font-medium scrollbar-none">
+        {[
+          { href: "/atlas", label: "Atlas", icon: MapPin },
+          { href: "/claims", label: "Claims", icon: FileText },
+          { href: "/dss", label: "DSS", icon: Bot },
+          { href: "/schemes", label: "Schemes", icon: Layers },
+          { href: "/audit", label: "Audit", icon: ShieldCheck },
+        ].map(({ href, label, icon: Icon }) => {
+          const active = href === "/claims" ? pathname.startsWith("/claims") : pathname === href;
+          return (
+            <Link key={href} href={href} className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${active ? "bg-emerald-500/10 text-emerald-500" : "text-slate-500 dark:text-slate-400"}`}>
+              <Icon className="w-3.5 h-3.5" />{label}
+            </Link>
+          );
+        })}
+      </nav>
     </header>
   );
 }

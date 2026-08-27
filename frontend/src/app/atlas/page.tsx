@@ -63,7 +63,7 @@ export default function AtlasPage() {
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-64px)] overflow-hidden bg-slate-950">
+    <div className="relative w-full h-[calc(100dvh-var(--header-height))] overflow-hidden bg-slate-950">
       {/* Top Search & Filter Bar Overlay */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4">
         <div className="glass-panel-glow p-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/60">
@@ -101,7 +101,7 @@ export default function AtlasPage() {
         key={mapKey}
         selectedClaimId={selectedClaimId}
         onSelectClaim={(id) => setSelectedClaimId(id)}
-        height="h-[calc(100vh-64px)]"
+        height="h-[calc(100dvh-var(--header-height))]"
       />
 
       {/* Upload Boundary Modal */}
