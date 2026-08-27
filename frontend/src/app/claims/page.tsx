@@ -553,13 +553,23 @@ export default function ClaimsRegistryPage() {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <Link
-                        href={`/claims/${claim.id}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white text-xs font-medium transition-all shadow-sm"
-                      >
-                        <span>Workspace</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/atlas?claim_id=${claim.claim_id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-400 hover:text-white text-xs font-medium transition-all shadow-sm"
+                          title="View Parcel on Map"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>Map</span>
+                        </Link>
+                        <Link
+                          href={`/claims/${claim.id}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all shadow-sm"
+                        >
+                          <span>Workspace</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1130,21 +1140,29 @@ export default function ClaimsRegistryPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
               <Link
                 href={`/claims/${createdClaim.id}`}
-                className="py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all text-center"
+                className="py-2.5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/50 transition-all text-center"
               >
-                <span>Open Claim Workspace</span>
+                <span>Open Claim</span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
 
               <Link
+                href={`/atlas?claim_id=${createdClaim.claim_id}`}
+                className="py-2.5 px-3 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-teal-950/50 transition-all text-center"
+              >
+                <MapPin className="w-4 h-4" />
+                <span>View on Map</span>
+              </Link>
+
+              <Link
                 href={`/dss?claim_id=${createdClaim.id}&query=${encodeURIComponent(`Explain which government schemes ${createdClaim.applicant_name} (${createdClaim.claim_id}) is eligible for and why.`)}`}
-                className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-700 hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all text-center"
+                className="py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-700 hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all text-center"
               >
                 <Bot className="w-4 h-4" />
-                <span>Chat with DSS AI Assistant</span>
+                <span>AI Schemes</span>
               </Link>
             </div>
 
@@ -1231,7 +1249,16 @@ export default function ClaimsRegistryPage() {
               </div>
             )}
 
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+              {bulkResult && !bulkResult.error ? (
+                <Link
+                  href={`/atlas?claim_id=${bulkResult.parcels?.[0]?.claim_id || ""}`}
+                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold flex items-center gap-1.5 shadow"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>View in WebGIS Atlas</span>
+                </Link>
+              ) : <div></div>}
               <button
                 type="button"
                 onClick={() => setShowBulkModal(false)}
@@ -1246,4 +1273,3 @@ export default function ClaimsRegistryPage() {
     </div>
   );
 }
-

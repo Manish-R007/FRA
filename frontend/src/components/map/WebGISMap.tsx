@@ -53,6 +53,10 @@ const ImageOverlay = dynamic(
   () => import("react-leaflet").then((mod) => mod.ImageOverlay),
   { ssr: false }
 );
+const MapController = dynamic(
+  () => import("./MapController"),
+  { ssr: false }
+);
 
 interface WebGISMapProps {
   initialGeometries?: any;
@@ -88,10 +92,30 @@ export default function WebGISMap({
     if (!initialGeometries) {
       fetch("/api/geometries")
         .then((res) => res.json())
-        .then((data) => setGeometries(data))
+        .then((data) => {
+          setGeometries(data);
+          if (selectedClaimId && data?.features) {
+            const match = data.features.find(
+              (f: any) =>
+                f.properties?.claim_id?.trim().toLowerCase() === selectedClaimId.trim().toLowerCase() ||
+                String(f.properties?.db_claim_id) === String(selectedClaimId)
+            );
+            if (match) setSelectedFeature(match.properties);
+          }
+        })
         .catch(() => {});
+    } else {
+      setGeometries(initialGeometries);
+      if (selectedClaimId && initialGeometries?.features) {
+        const match = initialGeometries.features.find(
+          (f: any) =>
+            f.properties?.claim_id?.trim().toLowerCase() === selectedClaimId.trim().toLowerCase() ||
+            String(f.properties?.db_claim_id) === String(selectedClaimId)
+        );
+        if (match) setSelectedFeature(match.properties);
+      }
     }
-  }, [initialGeometries]);
+  }, [initialGeometries, selectedClaimId]);
 
   // Styling rule per claim type and discrepancy flag
   const getFeatureStyle = (feature: any) => {
@@ -159,10 +183,20 @@ export default function WebGISMap({
 
   const onEachFeature = (feature: any, layer: any) => {
     layer.on({
-      click: () => {
+      click: (e: any) => {
         setSelectedFeature(feature.properties);
         if (onSelectClaim && feature.properties?.claim_id) {
           onSelectClaim(feature.properties.claim_id);
+        }
+        if (e.target && typeof e.target.getBounds === "function") {
+          try {
+            const bounds = e.target.getBounds();
+            if (bounds && bounds.isValid && bounds.isValid()) {
+              if (mapRef.current) {
+                mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 16, duration: 0.8 });
+              }
+            }
+          } catch (err) {}
         }
       },
       mouseover: (e: any) => {
@@ -224,6 +258,15 @@ export default function WebGISMap({
         className="w-full h-full z-0"
         ref={mapRef}
       >
+        <MapController
+          selectedClaimId={selectedClaimId}
+          geometries={geometries}
+          onFeatureFound={(props) => {
+            setSelectedFeature(props);
+          }}
+          autoFitAll={true}
+        />
+
         <TileLayer
           url={basemapUrls[activeBasemap]}
           attribution={

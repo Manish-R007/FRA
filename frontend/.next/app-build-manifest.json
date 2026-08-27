@@ -12,21 +12,10 @@
       "static/css/app/page.css",
       "static/chunks/app/page.js"
     ],
-    "/claims/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/claims/page.js"
-    ],
     "/dss/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/dss/page.js"
-    ],
-    "/claims/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/css/app/claims/[id]/page.css",
-      "static/chunks/app/claims/[id]/page.js"
     ],
     "/atlas/page": [
       "static/chunks/webpack.js",
@@ -34,10 +23,10 @@
       "static/css/app/atlas/page.css",
       "static/chunks/app/atlas/page.js"
     ],
-    "/audit/page": [
+    "/claims/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/audit/page.js"
+      "static/chunks/app/claims/page.js"
     ]
   }
 }

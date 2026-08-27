@@ -205,6 +205,14 @@ export default function ClaimDetailPage() {
 
           {/* Action Toolbar */}
           <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/atlas?claim_id=${claim.claim_id}`}
+              className="px-4 py-2 rounded-xl bg-teal-600/20 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>View on WebGIS Atlas</span>
+            </Link>
+
             <button
               onClick={handleRunAnalysis}
               disabled={runningAnalysis}
@@ -391,6 +399,19 @@ export default function ClaimDetailPage() {
                     </strong>
                     <span className="text-[10px] text-slate-500 block">{geometry?.flag_for_review ? "FLAGGED (>5% Diff)" : "Within Tolerance"}</span>
                   </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-xs font-bold text-white">Interactive Cadastral Parcel & Sentinel STAC Preview</h4>
+                  </div>
+                  <Link
+                    href={`/atlas?claim_id=${claim.claim_id}`}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                  >
+                    <span>Open Fullscreen Atlas →</span>
+                  </Link>
                 </div>
 
                 <div className="rounded-3xl border border-slate-800 overflow-hidden shadow-2xl h-[500px]">

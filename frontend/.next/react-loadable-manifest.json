@@ -5,6 +5,12 @@
       "static/chunks/_app-pages-browser_node_modules_next_dist_client_dev_noop-turbopack-hmr_js.js"
     ]
   },
+  "components\\map\\WebGISMap.tsx -> ./MapController": {
+    "id": "components\\map\\WebGISMap.tsx -> ./MapController",
+    "files": [
+      "static/chunks/_app-pages-browser_src_components_map_MapController_tsx.js"
+    ]
+  },
   "components\\map\\WebGISMap.tsx -> react-leaflet": {
     "id": "components\\map\\WebGISMap.tsx -> react-leaflet",
     "files": [
