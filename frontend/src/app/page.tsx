@@ -7,19 +7,13 @@ import {
   MapPin, 
   FileText, 
   Bot, 
-  ShieldCheck, 
   ArrowRight, 
   Activity, 
   Sparkles, 
   AlertTriangle, 
   TrendingUp, 
-  Layers, 
-  Droplets, 
-  Wheat, 
-  Home, 
   Award,
   CheckCircle2,
-  Clock,
   Scan,
   Compass
 } from "lucide-react";
@@ -310,46 +304,6 @@ export default function HomePage() {
                 <span className="text-slate-500 italic">State breakdowns will appear dynamically as real FRA claims are uploaded.</span>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* End-to-End Workflow Pipeline Stepper */}
-        <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                Complete End-to-End AI & GIS Lifecycle
-              </h3>
-              <p className="text-xs text-slate-400">
-                Transparent statutory verification from physical Patta scanning to satellite convergence.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 text-center text-xs">
-            {[
-              { step: "1", title: "Document Upload", desc: "PDF/PNG Patta Ingestion", icon: FileText, color: "text-blue-400" },
-              { step: "2", title: "Tesseract OCR", desc: "Text & Token Confidence", icon: Scan, color: "text-teal-400" },
-              { step: "3", title: "LLM Extraction", desc: "Anti-Hallucination JSON", icon: Bot, color: "text-amber-400" },
-              { step: "4", title: "Human Review", desc: "Split-Screen Verification", icon: CheckCircle2, color: "text-emerald-400" },
-              { step: "5", title: "Actual Polygon", desc: "WGS84 Geodesic Math", icon: MapPin, color: "text-purple-400" },
-              { step: "6", title: "Sentinel-2 S2", desc: "NDVI, NDWI, NDBI Bands", icon: Activity, color: "text-blue-400" },
-              { step: "7", title: "Segmentation", desc: "8-Class Land Cover 100%", icon: Trees, color: "text-emerald-400" },
-              { step: "8", title: "DSS & RAG", desc: "Grounded Scheme Sanctions", icon: Award, color: "text-amber-400" },
-            ].map((st) => {
-              const Icon = st.icon;
-              return (
-                <div key={st.step} className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800/80 space-y-1.5 hover:border-slate-700 transition-colors">
-                  <div className="w-7 h-7 mx-auto rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300 text-xs">
-                    {st.step}
-                  </div>
-                  <Icon className={`w-5 h-5 mx-auto ${st.color}`} />
-                  <strong className="block text-slate-200 text-xs font-semibold leading-tight">{st.title}</strong>
-                  <span className="block text-[10px] text-slate-500 leading-tight">{st.desc}</span>
-                </div>
-              );
-            })}
           </div>
         </div>
       </div>

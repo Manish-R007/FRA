@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import WebGISMap from "@/components/map/WebGISMap";
 import { 
   Search, 
@@ -9,30 +10,42 @@ import {
   Filter, 
   MapPin, 
   Compass, 
-  Info,
-  CheckCircle2,
-  AlertTriangle,
-  X,
-  Plus
+  Info, 
+  CheckCircle2, 
+  AlertTriangle, 
+  X, 
+  Plus,
+  User,
+  ChevronRight
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { FRAClaim } from "@/lib/types";
 
-export default function AtlasPage() {
+function AtlasContent() {
+  const searchParams = useSearchParams();
+  const initialParamClaim = searchParams.get("claim_id") || searchParams.get("id") || searchParams.get("selected") || null;
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(initialParamClaim);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [claimsList, setClaimsList] = useState<FRAClaim[]>([]);
   const [targetClaimId, setTargetClaimId] = useState<string>("");
   const [mapKey, setMapKey] = useState(Date.now());
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     api.getClaims({ limit: 100 })
       .then((data) => setClaimsList(data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (initialParamClaim) {
+      setSelectedClaimId(initialParamClaim);
+    }
+  }, [initialParamClaim]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,54 +58,110 @@ export default function AtlasPage() {
       const claimIdNum = targetClaimId ? parseInt(targetClaimId) : undefined;
       const res = await api.uploadGeospatialFile(file, claimIdNum, "FIELD_SURVEY_UPLOAD");
       
+      const newClaimId = res.parcels?.[0]?.claim_id || (claimIdNum ? claimsList.find(c => c.id === claimIdNum)?.claim_id : undefined);
+
       setUploadStatus(`✓ Success! ${res.message || "Boundary geometry uploaded and geodesic area calculated."}`);
       setIsUploading(false);
       
-      // Refresh map layers
+      if (newClaimId) {
+        setSelectedClaimId(newClaimId);
+      }
+
+      // Refresh map layers & zoom into newly uploaded parcel
       setTimeout(() => {
         setMapKey(Date.now());
+        if (newClaimId) {
+          setSelectedClaimId(newClaimId);
+        }
         api.getClaims({ limit: 100 })
           .then((data) => setClaimsList(data))
           .catch(() => {});
-        setTimeout(() => setShowUploadModal(false), 1500);
-      }, 1000);
+        setTimeout(() => setShowUploadModal(false), 1200);
+      }, 800);
     } catch (err: any) {
       setIsUploading(false);
       setUploadStatus(`Error: ${err.message || "Failed to process geospatial file. Must be valid GeoJSON or KML."}`);
     }
   };
 
+  const filteredSearchResults = searchQuery.trim()
+    ? claimsList.filter(
+        (c) =>
+          c.claim_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.applicant_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          c.village.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (c.district && c.district.toLowerCase().includes(searchQuery.toLowerCase()))
+      ).slice(0, 6)
+    : [];
+
   return (
     <div className="relative w-full h-[calc(100dvh-var(--header-height))] overflow-hidden bg-slate-950">
       {/* Top Search & Filter Bar Overlay */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4">
-        <div className="glass-panel-glow p-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/60">
-          <Search className="w-4 h-4 text-emerald-400 ml-2 shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by Claim ID, Applicant, or Village..."
-            className="w-full bg-transparent border-none text-xs text-white focus:outline-none placeholder-slate-400"
-          />
-          {searchQuery && (
+        <div className="relative">
+          <div className="glass-panel-glow p-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/60">
+            <Search className="w-4 h-4 text-emerald-400 ml-2 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder="Search by Claim ID, Applicant, or Village..."
+              className="w-full bg-transparent border-none text-xs text-white focus:outline-none placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setShowDropdown(false);
+                }}
+                className="text-xs text-slate-400 hover:text-white px-2"
+              >
+                ✕
+              </button>
+            )}
             <button
-              onClick={() => setSearchQuery("")}
-              className="text-xs text-slate-400 hover:text-white px-2"
+              onClick={() => {
+                setUploadStatus(null);
+                setShowUploadModal(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow transition-all"
             >
-              ✕
+              <Upload className="w-3.5 h-3.5" />
+              <span>Upload Boundary</span>
             </button>
+          </div>
+
+          {/* Live Search Suggestions Dropdown */}
+          {showDropdown && filteredSearchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 glass-panel-glow rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden z-30 divide-y divide-slate-800">
+              {filteredSearchResults.map((claim) => (
+                <button
+                  key={claim.id}
+                  onClick={() => {
+                    setSelectedClaimId(claim.claim_id);
+                    setSearchQuery(claim.claim_id);
+                    setShowDropdown(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left hover:bg-slate-800/80 flex items-center justify-between text-xs transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <div>
+                      <span className="font-mono font-bold text-emerald-400 block">{claim.claim_id}</span>
+                      <span className="text-[11px] text-slate-300">{claim.applicant_name} • {claim.village}, {claim.district}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                    {claim.claim_type} Title
+                  </span>
+                </button>
+              ))}
+            </div>
           )}
-          <button
-            onClick={() => {
-              setUploadStatus(null);
-              setShowUploadModal(true);
-            }}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow transition-all"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload Boundary</span>
-          </button>
         </div>
       </div>
 
@@ -190,5 +259,20 @@ export default function AtlasPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AtlasPage() {
+  return (
+    <Suspense fallback={
+      <div className="w-full h-[calc(100dvh-var(--header-height))] bg-slate-950 flex items-center justify-center text-slate-400">
+        <div className="flex items-center gap-3">
+          <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Loading FRA WebGIS Atlas...</span>
+        </div>
+      </div>
+    }>
+      <AtlasContent />
+    </Suspense>
   );
 }

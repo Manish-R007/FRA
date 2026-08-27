@@ -590,6 +590,12 @@ video {
 .top-4 {
   top: 1rem;
 }
+.left-0 {
+  left: 0px;
+}
+.top-full {
+  top: 100%;
+}
 .z-0 {
   z-index: 0;
 }
@@ -601,6 +607,9 @@ video {
 }
 .z-50 {
   z-index: 50;
+}
+.z-30 {
+  z-index: 30;
 }
 .col-span-2 {
   grid-column: span 2 / span 2;
@@ -1042,6 +1051,10 @@ video {
 .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) {
   border-color: rgb(30 41 59 / 0.6);
 }
+.divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-opacity: 1;
+  border-color: rgb(30 41 59 / var(--tw-divide-opacity, 1));
+}
 .self-start {
   align-self: flex-start;
 }
@@ -1391,6 +1404,12 @@ video {
 }
 .bg-white\/90 {
   background-color: rgb(255 255 255 / 0.9);
+}
+.bg-emerald-950\/40 {
+  background-color: rgb(2 44 34 / 0.4);
+}
+.bg-teal-600\/20 {
+  background-color: rgb(13 148 136 / 0.2);
 }
 .bg-gradient-to-b {
   background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
@@ -2308,6 +2327,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   --tw-bg-opacity: 1;
   background-color: rgb(20 184 166 / var(--tw-bg-opacity, 1));
 }
+.hover\:bg-slate-800\/80:hover {
+  background-color: rgb(30 41 59 / 0.8);
+}
+.hover\:bg-teal-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(13 148 136 / var(--tw-bg-opacity, 1));
+}
 .hover\:from-amber-500:hover {
   --tw-gradient-from: #f59e0b var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(245 158 11 / 0) var(--tw-gradient-to-position);
@@ -2380,6 +2406,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .group:hover .group-hover\:scale-105 {
   --tw-scale-x: 1.05;
   --tw-scale-y: 1.05;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.group:hover .group-hover\:scale-110 {
+  --tw-scale-x: 1.1;
+  --tw-scale-y: 1.1;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 .dark\:border-slate-800:is(.dark *) {
@@ -2464,6 +2495,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
   .sm\:grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sm\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .sm\:flex-row {
@@ -2555,10 +2590,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
   .lg\:grid-cols-6 {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  .lg\:grid-cols-8 {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   .lg\:p-7 {
