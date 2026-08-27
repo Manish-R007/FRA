@@ -353,15 +353,15 @@ export default function ClaimsRegistryPage() {
   return (
     <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6 page-enter">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">FRA Claims Registry</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">FRA Claims Registry</h1>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
               {claims.length} Records
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Individual (IFR), Community (CR), and Community Forest Resource (CFR) titles under Forest Rights Act 2006.
           </p>
         </div>
@@ -372,9 +372,9 @@ export default function ClaimsRegistryPage() {
               setBulkResult(null);
               setShowBulkModal(true);
             }}
-            className="px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
+            className="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-emerald-700 dark:text-slate-200 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-emerald-300 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
           >
-            <Upload className="w-4 h-4 text-teal-400" />
+            <Upload className="w-4 h-4 text-emerald-600 dark:text-teal-400" />
             <span>Bulk Upload GeoJSON</span>
           </button>
 
@@ -382,17 +382,17 @@ export default function ClaimsRegistryPage() {
             <button
               onClick={handlePurgeAllData}
               disabled={purging}
-              className="px-3.5 py-2.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-2 transition-all"
+              className="px-3.5 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
               title="Reset & Purge All Claims Data"
             >
-              <Trash2 className="w-4 h-4 text-rose-400" />
+              <Trash2 className="w-4 h-4 text-rose-500 dark:text-rose-400" />
               <span>{purging ? "Purging..." : "Purge Data"}</span>
             </button>
           )}
 
           <button
             onClick={openNewClaimModal}
-            className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02]"
+            className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/30 transition-all hover:scale-[1.02]"
           >
             <Plus className="w-4 h-4" />
             <span>Register New FRA Claim</span>
@@ -409,7 +409,7 @@ export default function ClaimsRegistryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by Claim ID, Applicant Name, or Survey Number..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/60"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
           />
         </form>
 
@@ -417,7 +417,7 @@ export default function ClaimsRegistryPage() {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-emerald-500/60"
+            className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
           >
             <option value="">All Rights Types (IFR / CR / CFR)</option>
             <option value="IFR">IFR - Individual Forest Rights</option>
@@ -430,7 +430,7 @@ export default function ClaimsRegistryPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 focus:outline-none focus:border-emerald-500/60"
+            className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
           >
             <option value="">All Workflow Statuses</option>
             <option value="APPROVED">APPROVED (Patta Granted)</option>
@@ -444,10 +444,10 @@ export default function ClaimsRegistryPage() {
       </div>
 
       {/* Claims Data Table */}
-      <div className="glass-panel rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900/80 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+            <thead className="bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
               <tr>
                 <th className="py-3.5 px-4">Claim ID</th>
                 <th className="py-3.5 px-4">Applicant & Relation</th>
@@ -459,7 +459,7 @@ export default function ClaimsRegistryPage() {
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
@@ -471,11 +471,11 @@ export default function ClaimsRegistryPage() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="max-w-md mx-auto space-y-3 py-4">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
                         <FileText className="w-6 h-6" />
                       </div>
-                      <strong className="text-base font-bold text-white block">No Claims in Registry (Clean State)</strong>
-                      <p className="text-xs text-slate-400">
+                      <strong className="text-base font-bold text-slate-800 dark:text-white block">No Claims in Registry (Clean State)</strong>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Upload official Patta documents (PDF/images) with AI OCR extraction, bulk import village Cadastral GeoJSON boundaries, or manually register new titles.
                       </p>
                       <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
@@ -491,9 +491,9 @@ export default function ClaimsRegistryPage() {
                             setBulkResult(null);
                             setShowBulkModal(true);
                           }}
-                          className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5"
+                          className="px-4 py-2 rounded-xl bg-white hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-emerald-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
                         >
-                          <Upload className="w-3.5 h-3.5 text-teal-400" />
+                          <Upload className="w-3.5 h-3.5 text-emerald-600 dark:text-teal-400" />
                           <span>Upload GeoJSON / KML</span>
                         </button>
                       </div>
@@ -502,15 +502,15 @@ export default function ClaimsRegistryPage() {
                 </tr>
               ) : (
                 claims.map((claim) => (
-                  <tr key={claim.id} className="hover:bg-slate-900/50 transition-colors group">
-                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                  <tr key={claim.id} className="hover:bg-emerald-50/40 dark:hover:bg-slate-900/50 transition-colors group">
+                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 dark:text-emerald-400">
                       <Link href={`/claims/${claim.id}`} className="hover:underline flex items-center gap-1">
                         <span>{claim.claim_id}</span>
                       </Link>
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <strong className="block text-slate-200">{claim.applicant_name}</strong>
+                      <strong className="block text-slate-900 dark:text-slate-200">{claim.applicant_name}</strong>
                       <span className="text-[11px] text-slate-500">
                         {claim.father_or_husband_name ? `S/o ${claim.father_or_husband_name}` : "Gram Sabha Committee"}
                       </span>
@@ -518,20 +518,20 @@ export default function ClaimsRegistryPage() {
 
                     <td className="py-3.5 px-4">
                       <span className={`text-[10px] px-2 py-0.5 rounded font-semibold font-mono ${
-                        claim.claim_type === "IFR" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" :
-                        claim.claim_type === "CR" ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
-                        "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        claim.claim_type === "IFR" ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30" :
+                        claim.claim_type === "CR" ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30" :
+                        "bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30"
                       }`}>
                         {claim.claim_type}
                       </span>
                     </td>
 
-                    <td className="py-3.5 px-4 text-slate-300">
+                    <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
                       <span>{claim.village}</span>
                       <span className="text-[11px] text-slate-500 block">{claim.district}, {claim.state}</span>
                     </td>
 
-                    <td className="py-3.5 px-4 font-medium text-slate-200">
+                    <td className="py-3.5 px-4 font-medium text-slate-800 dark:text-slate-200">
                       {formatArea(claim.area_claimed)}
                     </td>
 
@@ -543,10 +543,10 @@ export default function ClaimsRegistryPage() {
 
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5 text-[10px]">
-                        <span className={`px-1.5 py-0.5 rounded ${claim.has_geometry ? "bg-blue-500/20 text-blue-300" : "bg-slate-800 text-slate-500"}`}>
+                        <span className={`px-1.5 py-0.5 rounded ${claim.has_geometry ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/20" : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"}`}>
                           GIS Polygon
                         </span>
-                        <span className={`px-1.5 py-0.5 rounded ${claim.has_analysis ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-500"}`}>
+                        <span className={`px-1.5 py-0.5 rounded ${claim.has_analysis ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20" : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"}`}>
                           Sentinel-2
                         </span>
                       </div>
@@ -556,7 +556,7 @@ export default function ClaimsRegistryPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
                           href={`/atlas?claim_id=${claim.claim_id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-400 hover:text-white text-xs font-medium transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 dark:bg-emerald-950/40 dark:hover:bg-emerald-600 border border-emerald-300 dark:border-emerald-500/30 text-emerald-700 hover:text-white dark:text-emerald-400 dark:hover:text-white text-xs font-semibold transition-all shadow-sm"
                           title="View Parcel on Map"
                         >
                           <MapPin className="w-3.5 h-3.5" />
@@ -564,7 +564,7 @@ export default function ClaimsRegistryPage() {
                         </Link>
                         <Link
                           href={`/claims/${claim.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-emerald-700 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-emerald-300 text-xs font-semibold transition-all shadow-sm"
                         >
                           <span>Workspace</span>
                           <ChevronRight className="w-3.5 h-3.5" />

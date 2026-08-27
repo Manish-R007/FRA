@@ -33,15 +33,15 @@ export default function SchemesPage() {
   return (
     <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6 page-enter">
       {/* Header */}
-      <div className="border-b border-slate-800 pb-5 space-y-1">
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-5 space-y-1">
         <div className="flex items-center gap-2">
-          <Layers className="w-6 h-6 text-emerald-400" />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Government Welfare Schemes Catalog</h1>
-          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
+          <Layers className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Government Welfare Schemes Catalog</h1>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
             {schemes.length} Schemes Active
           </span>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Statutory convergence frameworks configured for automated DSS evaluation for Forest Rights Act title holders.
         </p>
       </div>
@@ -55,27 +55,27 @@ export default function SchemesPage() {
           </div>
         ) : (
           schemes.map((scheme) => (
-            <div key={scheme.id} className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4 hover:border-slate-700 transition-all flex flex-col justify-between">
+            <div key={scheme.id} className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 hover:border-emerald-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between shadow-sm">
               <div className="space-y-4">
-                <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
                   <div>
-                    <span className="text-[10px] text-emerald-400 font-mono uppercase font-bold tracking-wider block">
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono uppercase font-bold tracking-wider block">
                       {scheme.department}
                     </span>
-                    <h3 className="text-base font-bold text-white">{scheme.name}</h3>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">{scheme.name}</h3>
                   </div>
-                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300">
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 shadow-sm">
                     {scheme.code}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   {scheme.description}
                 </p>
 
                 {/* Benefits Banner */}
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
-                  <strong className="block text-emerald-200 text-[10px] uppercase font-bold tracking-wider">
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 space-y-1">
+                  <strong className="block text-emerald-900 dark:text-emerald-200 text-[10px] uppercase font-bold tracking-wider">
                     Entitlement Benefits:
                   </strong>
                   <p className="leading-relaxed">{scheme.benefits}</p>
@@ -83,10 +83,10 @@ export default function SchemesPage() {
 
                 {/* Required Documents */}
                 <div className="space-y-1.5 text-xs">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase block">Required Proof Documents:</span>
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase block">Required Proof Documents:</span>
                   <div className="flex flex-wrap gap-1.5">
                     {scheme.documents_required?.map((doc: string) => (
-                      <span key={doc} className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-[11px] flex items-center gap-1">
+                      <span key={doc} className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 text-[11px] flex items-center gap-1 shadow-sm">
                         <FileText className="w-3 h-3 text-slate-400" />
                         {doc}
                       </span>
@@ -99,9 +99,9 @@ export default function SchemesPage() {
               <div className="pt-2">
                 <Link
                   href={`/dss?query=${encodeURIComponent(`Explain the statutory eligibility guidelines, satellite verification criteria, and required documents for ${scheme.name} (${scheme.code}) under the Forest Rights Act convergence framework.`)}`}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+                  className="w-full py-2.5 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-slate-900 dark:hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-200 border border-emerald-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
                 >
-                  <Bot className="w-4 h-4" />
+                  <Bot className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Inquire with DSS AI Chatbot</span>
                 </Link>
               </div>

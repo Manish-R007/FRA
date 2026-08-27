@@ -60,21 +60,21 @@ export default function HomePage() {
   return (
     <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 pb-16 page-enter">
       {/* Hero Section */}
-      <section className="relative border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative border-b border-slate-200 dark:border-slate-800 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-amber-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
                 Ministry of Tribal Affairs • SIH 2025 National Platform
               </div>
-              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                AI-Powered <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">FRA Atlas</span> & WebGIS Decision Support System
+              <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+                AI-Powered <span className="bg-gradient-to-r from-emerald-600 via-teal-600 to-amber-600 dark:from-emerald-400 dark:via-teal-300 dark:to-amber-300 bg-clip-text text-transparent">FRA Atlas</span> & WebGIS Decision Support System
               </h1>
-              <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
+              <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
                 Integrated monitoring, satellite remote-sensing segmentation, and rule-based welfare scheme convergence for Forest Rights Act (FRA 2006) implementation across tribal belts.
               </p>
             </div>
@@ -83,7 +83,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-3 items-center">
               <Link
                 href="/atlas"
-                className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition-all group"
+                className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/30 transition-all group"
               >
                 <Compass className="w-4 h-4" />
                 <span>Launch WebGIS Atlas</span>
@@ -91,9 +91,9 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/dss"
-                className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-sm font-semibold flex items-center gap-2 transition-all"
+                className="px-5 py-3 rounded-xl bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-white text-sm font-semibold flex items-center gap-2 transition-all shadow-sm"
               >
-                <Bot className="w-4 h-4 text-amber-400" />
+                <Bot className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                 <span>DSS Command Center</span>
               </Link>
             </div>
@@ -101,11 +101,11 @@ export default function HomePage() {
 
           {/* National Live Key Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 pt-4">
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-blue-400" /> Total Claims
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Total Claims
               </span>
-              <strong className="text-2xl font-bold text-white block">
+              <strong className="text-2xl font-bold text-slate-900 dark:text-white block">
                 {stats?.summary.total_claims || 0}
               </strong>
               <span className="text-[11px] text-slate-500">
@@ -113,51 +113,51 @@ export default function HomePage() {
               </span>
             </div>
 
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Approved Titles
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Approved Titles
               </span>
-              <strong className="text-2xl font-bold text-emerald-400 block">
+              <strong className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 block">
                 {stats?.summary.approved_claims || 0}
               </strong>
-              <span className="text-[11px] text-emerald-500/80">Titles Distributed</span>
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-500/80">Titles Distributed</span>
             </div>
 
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <Trees className="w-3.5 h-3.5 text-teal-400" /> FRA Land Extent
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <Trees className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" /> FRA Land Extent
               </span>
-              <strong className="text-2xl font-bold text-white block">
-                {stats?.summary.total_claimed_area_hectares || 0} <span className="text-sm font-normal text-slate-400">Ha</span>
+              <strong className="text-2xl font-bold text-slate-900 dark:text-white block">
+                {stats?.summary.total_claimed_area_hectares || 0} <span className="text-sm font-normal text-slate-500 dark:text-slate-400">Ha</span>
               </strong>
               <span className="text-[11px] text-slate-500">IFR & CFR Total</span>
             </div>
 
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <Scan className="w-3.5 h-3.5 text-amber-400" /> AI Assets Detected
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <Scan className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> AI Assets Detected
               </span>
-              <strong className="text-2xl font-bold text-amber-400 block">
+              <strong className="text-2xl font-bold text-amber-600 dark:text-amber-400 block">
                 {stats?.assets_detected.total || 0}
               </strong>
               <span className="text-[11px] text-slate-500">Ponds, Farms, Forests</span>
             </div>
 
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" /> Area Discrepancies
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" /> Area Discrepancies
               </span>
-              <strong className="text-2xl font-bold text-rose-400 block">
+              <strong className="text-2xl font-bold text-rose-600 dark:text-rose-400 block">
                 {stats?.summary.flagged_discrepancies || 0}
               </strong>
-              <span className="text-[11px] text-rose-400/80">Flagged For Review</span>
+              <span className="text-[11px] text-rose-600 dark:text-rose-400/80">Flagged For Review</span>
             </div>
 
-            <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-1">
-              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                <Award className="w-3.5 h-3.5 text-purple-400" /> Scheme Priorities
+            <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1 shadow-sm">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                <Award className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" /> Scheme Priorities
               </span>
-              <strong className="text-2xl font-bold text-purple-400 block">
+              <strong className="text-2xl font-bold text-purple-600 dark:text-purple-400 block">
                 {stats?.summary.high_priority_interventions || 0}
               </strong>
               <span className="text-[11px] text-slate-500">High Convergence</span>
@@ -170,13 +170,13 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
         {/* Clean State Welcome Banner if 0 claims */}
         {stats && stats.summary.total_claims === 0 && !loading && (
-          <div className="glass-panel-glow p-6 rounded-3xl border border-emerald-500/30 bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="glass-panel-glow p-6 rounded-3xl border border-emerald-500/30 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-mono text-emerald-400 uppercase font-bold flex items-center gap-1.5">
+              <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 uppercase font-bold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> Database Ready For Real-Time Upload
               </span>
-              <h3 className="text-base font-bold text-white">Upload Your First Real FRA Claim or Geospatial Cadastral Dataset</h3>
-              <p className="text-xs text-slate-300">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Upload Your First Real FRA Claim or Geospatial Cadastral Dataset</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300">
                 You can upload Patta documents (PDF/JPG) for instant OCR & AI schema extraction, or import GeoJSON/KML boundary maps.
               </p>
             </div>
@@ -197,20 +197,20 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-emerald-500" />
-              <h2 className="text-lg font-bold text-white">Live WebGIS Parcel Explorer</h2>
-              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Live WebGIS Parcel Explorer</h2>
+              <span className="text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                 Sentinel-2 STAC
               </span>
             </div>
             <Link
               href="/atlas"
-              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+              className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-semibold flex items-center gap-1"
             >
               Open Fullscreen Atlas →
             </Link>
           </div>
 
-          <div className="rounded-3xl border border-slate-800 overflow-hidden shadow-2xl h-[480px]">
+          <div className="rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl h-[480px]">
             <WebGISMap height="h-[480px]" />
           </div>
         </div>
@@ -218,13 +218,13 @@ export default function HomePage() {
         {/* Analytics Grid: Recharts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Land-Cover Distribution Pie Chart */}
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
+          <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Activity className="w-4 h-4 text-emerald-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 AI Land-Cover Distribution
               </h3>
-              <span className="text-[11px] text-slate-400">Total Hectares</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Total Hectares</span>
             </div>
 
             <div className="h-56 w-full">
@@ -256,7 +256,7 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300">
               {landUseData.map((d, i) => (
                 <div key={d.name} className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: LAND_USE_COLORS[i] }}></span>
@@ -267,13 +267,13 @@ export default function HomePage() {
           </div>
 
           {/* Claims by State Bar Chart */}
-          <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4 lg:col-span-2">
+          <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4 lg:col-span-2 shadow-sm">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-blue-400" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 State-Wise FRA Titles & Progress
               </h3>
-              <span className="text-[11px] text-slate-400">Claims Logged</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Claims Logged</span>
             </div>
 
             <div className="h-64 w-full">
@@ -295,7 +295,7 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800 gap-2">
+            <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800 gap-2">
               {(stats?.charts.by_state || []).length > 0 ? (
                 stats?.charts.by_state.map((s) => (
                   <span key={s.state}>{s.state}: <strong>{s.count} Claim{s.count > 1 ? 's' : ''}</strong></span>
