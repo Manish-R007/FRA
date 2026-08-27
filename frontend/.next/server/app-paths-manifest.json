@@ -1,7 +1,8 @@
 {
-  "/claims/[id]/page": "app/claims/[id]/page.js",
-  "/atlas/page": "app/atlas/page.js",
+  "/page": "app/page.js",
   "/claims/page": "app/claims/page.js",
   "/dss/page": "app/dss/page.js",
-  "/schemes/page": "app/schemes/page.js"
+  "/claims/[id]/page": "app/claims/[id]/page.js",
+  "/atlas/page": "app/atlas/page.js",
+  "/audit/page": "app/audit/page.js"
 }

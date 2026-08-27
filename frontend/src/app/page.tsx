@@ -64,7 +64,7 @@ export default function HomePage() {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-16">
+    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 pb-16 page-enter">
       {/* Hero Section */}
       <section className="relative border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>

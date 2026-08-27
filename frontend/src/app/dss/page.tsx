@@ -330,7 +330,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
   const activeClaim = claimsList.find(c => c.id === selectedClaimId);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-8 space-y-8">
+    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 lg:p-8 space-y-8 page-enter">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-1">

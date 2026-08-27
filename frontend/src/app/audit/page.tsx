@@ -49,7 +49,7 @@ export default function AuditVaultPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 lg:p-8 space-y-6">
+    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6 page-enter">
       {/* Header */}
       <div className="border-b border-slate-800 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
