@@ -146,10 +146,10 @@ export default function Navbar() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-base tracking-tight bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
+              <span className="font-extrabold text-base tracking-tight bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-700 dark:from-emerald-400 dark:to-teal-300 bg-clip-text text-transparent">
                 FRA ATLAS AI
               </span>
-              <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-medium">
+              <span className="hidden sm:inline text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-mono font-bold">
                 DSS
               </span>
             </div>
@@ -160,13 +160,13 @@ export default function Navbar() {
         </Link>
 
         {/* Primary Nav Links */}
-        <nav className="hidden xl:flex items-center gap-1 text-sm font-medium">
+        <nav className="hidden xl:flex items-center gap-1.5 text-sm font-medium">
           <Link
             href="/atlas"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
               pathname === "/atlas"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
+                : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
             }`}
           >
             <MapPin className="w-4 h-4 text-emerald-500" />
@@ -175,10 +175,10 @@ export default function Navbar() {
 
           <Link
             href="/claims"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
               pathname.startsWith("/claims")
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
+                : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
             }`}
           >
             <FileText className="w-4 h-4 text-emerald-500" />
@@ -187,10 +187,10 @@ export default function Navbar() {
 
           <Link
             href="/dss"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
               pathname === "/dss"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
+                : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
             }`}
           >
             <Bot className="w-4 h-4 text-amber-500" />
@@ -199,10 +199,10 @@ export default function Navbar() {
 
           <Link
             href="/schemes"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
               pathname === "/schemes"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
+                : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
             }`}
           >
             <Layers className="w-4 h-4 text-emerald-500" />
@@ -211,10 +211,10 @@ export default function Navbar() {
 
           <Link
             href="/audit"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
               pathname === "/audit"
-                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
+                : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-blue-500" />
@@ -228,7 +228,7 @@ export default function Navbar() {
           <div className="relative">
             <button
               onClick={() => setShowRoleMenu(!showRoleMenu)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-emerald-500/40 text-xs transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:border-emerald-300 dark:hover:border-emerald-500/40 text-xs transition-all shadow-sm"
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span className="font-semibold text-slate-800 dark:text-slate-200">
@@ -250,8 +250,8 @@ export default function Navbar() {
                       onClick={() => handleRoleSwitch(p)}
                       className={`w-full text-left px-3 py-2 rounded-lg text-xs flex flex-col transition-colors ${
                         currentUser?.role === p.role
-                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold"
-                          : "hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold"
+                          : "hover:bg-emerald-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300"
                       }`}
                     >
                       <span className="font-medium">{p.role}</span>

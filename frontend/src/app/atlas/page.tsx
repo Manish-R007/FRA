@@ -137,7 +137,7 @@ function AtlasContent() {
 
           {/* Live Search Suggestions Dropdown */}
           {showDropdown && filteredSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 glass-panel-glow rounded-2xl border border-slate-700/80 shadow-2xl overflow-hidden z-30 divide-y divide-slate-800">
+            <div className="absolute top-full left-0 right-0 mt-2 glass-panel-glow rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-2xl overflow-hidden z-30 divide-y divide-slate-100 dark:divide-slate-800">
               {filteredSearchResults.map((claim) => (
                 <button
                   key={claim.id}
@@ -146,16 +146,16 @@ function AtlasContent() {
                     setSearchQuery(claim.claim_id);
                     setShowDropdown(false);
                   }}
-                  className="w-full px-4 py-2.5 text-left hover:bg-slate-800/80 flex items-center justify-between text-xs transition-colors group"
+                  className="w-full px-4 py-2.5 text-left hover:bg-emerald-50/90 dark:hover:bg-slate-800/80 flex items-center justify-between text-xs transition-colors group"
                 >
                   <div className="flex items-center gap-2.5">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
                     <div>
-                      <span className="font-mono font-bold text-emerald-400 block">{claim.claim_id}</span>
-                      <span className="text-[11px] text-slate-300">{claim.applicant_name} • {claim.village}, {claim.district}</span>
+                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 block">{claim.claim_id}</span>
+                      <span className="text-[11px] text-slate-600 dark:text-slate-300">{claim.applicant_name} • {claim.village}, {claim.district}</span>
                     </div>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-slate-300 font-mono font-semibold">
                     {claim.claim_type} Title
                   </span>
                 </button>

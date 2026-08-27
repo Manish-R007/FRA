@@ -505,9 +505,9 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                   <button
                     key={i}
                     onClick={() => handleSendQuery(sug)}
-                    className="px-3 py-1.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-amber-300 text-[11px] transition-all text-left flex items-center gap-1.5 shadow-sm"
+                    className="px-3 py-1.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-amber-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/50 text-slate-700 dark:text-slate-300 hover:text-amber-800 dark:hover:text-amber-300 text-[11px] transition-all text-left flex items-center gap-1.5 shadow-sm"
                   >
-                    <ArrowRight className="w-3 h-3 text-amber-400 shrink-0" />
+                    <ArrowRight className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
                     <span>{sug}</span>
                   </button>
                 ))}
@@ -516,7 +516,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
           )}
 
           {/* Chat Input Box */}
-          <div className="glass-panel-glow p-3.5 rounded-3xl border border-slate-700/80 shadow-2xl space-y-2">
+          <div className="glass-panel-glow p-3.5 rounded-3xl border border-slate-200 dark:border-slate-700/80 shadow-2xl space-y-2">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -524,13 +524,13 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                 onChange={(e) => setInputQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSendQuery(inputQuery)}
                 placeholder="Ask about claim eligibility, satellite NDVI/NDWI, Van Dhan MFP, or PMKSY irrigation rules..."
-                className="flex-1 px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                className="flex-1 px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-500"
                 disabled={loading}
               />
               <button
                 onClick={() => handleSendQuery(inputQuery)}
                 disabled={loading || !inputQuery.trim()}
-                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-bold shadow-lg shadow-amber-950/50 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
+                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white text-xs font-bold shadow-lg shadow-amber-950/30 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">Ask AI</span>
@@ -544,7 +544,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                 <button
                   key={i}
                   onClick={() => handleSendQuery(sp.query)}
-                  className="px-2.5 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[10px] shrink-0 transition-colors truncate max-w-[280px]"
+                  className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/80 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-white text-[10px] shrink-0 transition-colors truncate max-w-[280px] shadow-sm"
                   title={sp.query}
                 >
                   {sp.query}

@@ -207,7 +207,7 @@ export default function ClaimDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/atlas?claim_id=${claim.claim_id}`}
-              className="px-4 py-2 rounded-xl bg-teal-600/20 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow"
+              className="px-4 py-2 rounded-xl bg-teal-50 hover:bg-teal-100 dark:bg-teal-900/20 dark:hover:bg-teal-900/40 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
             >
               <Compass className="w-3.5 h-3.5" />
               <span>View on WebGIS Atlas</span>
@@ -216,7 +216,7 @@ export default function ClaimDetailPage() {
             <button
               onClick={handleRunAnalysis}
               disabled={runningAnalysis}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all"
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-950/30 transition-all"
             >
               <Play className="w-3.5 h-3.5" />
               <span>{runningAnalysis ? "Analyzing Sentinel-2..." : "Run Satellite Analysis"}</span>
@@ -225,9 +225,9 @@ export default function ClaimDetailPage() {
             {claim.status !== "APPROVED" && (
               <button
                 onClick={() => handleStatusChange("APPROVED")}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-emerald-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all"
+                className="px-4 py-2 rounded-xl bg-white hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-700 text-slate-700 hover:text-emerald-700 dark:text-slate-200 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Approve Patta Title</span>
               </button>
             )}
@@ -235,7 +235,7 @@ export default function ClaimDetailPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="max-w-7xl mx-auto flex items-center gap-1 mt-4 border-t border-slate-800/80 pt-2 text-xs overflow-x-auto">
+        <div className="max-w-7xl mx-auto flex items-center gap-1.5 mt-4 border-t border-slate-200 dark:border-slate-800/80 pt-2.5 text-xs overflow-x-auto">
           {[
             { id: "overview", label: "Overview & Profile", icon: FileText },
             { id: "gis", label: "GIS Boundary & Area", icon: MapPin },
@@ -245,17 +245,18 @@ export default function ClaimDetailPage() {
             { id: "audit", label: "Cryptographic Audit Trail", icon: ShieldCheck },
           ].map((t) => {
             const Icon = t.icon;
+            const isActive = activeTab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setActiveTab(t.id as any)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-medium transition-all ${
-                  activeTab === t.id
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-semibold"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold transition-all duration-150 shadow-sm ${
+                  isActive
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 ring-1 ring-emerald-500/20"
+                    : "text-slate-600 dark:text-slate-400 bg-white/70 dark:bg-slate-900/60 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/90 dark:hover:bg-emerald-950/40 border border-slate-200/80 dark:border-slate-800 hover:border-emerald-300/80 dark:hover:border-emerald-700/50"
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"}`} />
                 <span>{t.label}</span>
               </button>
             );
@@ -553,10 +554,10 @@ export default function ClaimDetailPage() {
                     <button
                       key={r.id}
                       onClick={() => setSelectedRaster(r.id as any)}
-                      className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
+                      className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 ${
                         selectedRaster === r.id
-                          ? "bg-emerald-600 text-white font-semibold shadow"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "bg-emerald-600 text-white font-semibold shadow-sm"
+                          : "text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-800"
                       }`}
                     >
                       {r.label}
@@ -750,9 +751,9 @@ export default function ClaimDetailPage() {
                   {/* AI Clarification Action Button */}
                   <Link
                     href={`/dss?claim_id=${claim.id}&query=${encodeURIComponent(`Explain in detail why ${claim.applicant_name} is evaluated as ${rec.eligibility_status} for ${rec.scheme_name} (${rec.scheme_code}), what the satellite NDVI/NDWI data indicates, what documents are required, and what the next steps are.`)}`}
-                    className="w-full py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-amber-500/20 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
+                    className="w-full py-2.5 px-3 rounded-2xl bg-amber-50 hover:bg-amber-100/80 dark:bg-slate-900 dark:hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200 border border-amber-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-500/40 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"
                   >
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <MessageSquare className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     <span>Clarify Eligibility with AI Chatbot</span>
                   </Link>
                 </div>
