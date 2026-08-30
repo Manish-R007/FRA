@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     )
     SENTINEL_HUB_CATALOG_URL: str = os.getenv(
         "SENTINEL_HUB_CATALOG_URL",
-        "https://sh.dataspace.copernicus.eu/catalog/v1.0"
+        "https://sh.dataspace.copernicus.eu/api/v1/catalog/1.0.0"
     )
     SENTINEL_HUB_MAX_CLOUD_COVER: float = float(os.getenv("SENTINEL_HUB_MAX_CLOUD_COVER", "20.0"))
     SENTINEL_HUB_DEFAULT_RESOLUTION: float = float(os.getenv("SENTINEL_HUB_DEFAULT_RESOLUTION", "10.0"))

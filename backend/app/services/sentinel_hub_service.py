@@ -120,12 +120,7 @@ class SentinelHubClient:
             "collections": ["sentinel-2-l2a"],
             "datetime": f"{start_date}T00:00:00Z/{end_date}T23:59:59Z",
             "intersects": geojson_geom,
-            "query": {
-                "eo:cloud_cover": {
-                    "lte": float(max_cloud_cover)
-                }
-            },
-            "limit": 10
+            "limit": 20
         }
 
         try:
@@ -137,9 +132,14 @@ class SentinelHubClient:
                     if not features:
                         logger.info("No Sentinel-2 scenes matched catalog query.")
                         return None
-                    # Sort by cloud cover ascending to pick lowest cloud scene
-                    features.sort(key=lambda f: f.get("properties", {}).get("eo:cloud_cover", 100.0))
-                    best_scene = features[0]
+                    # Filter scenes by max cloud cover if available, otherwise take least cloud cover scene
+                    valid_features = [
+                        f for f in features
+                        if f.get("properties", {}).get("eo:cloud_cover", 100.0) <= float(max_cloud_cover)
+                    ]
+                    candidate_scenes = valid_features if valid_features else features
+                    candidate_scenes.sort(key=lambda f: f.get("properties", {}).get("eo:cloud_cover", 100.0))
+                    best_scene = candidate_scenes[0]
                     props = best_scene.get("properties", {})
                     return {
                         "id": best_scene.get("id"),

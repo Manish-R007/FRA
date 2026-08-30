@@ -2,16 +2,16 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Filter, 
-  MapPin, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ExternalLink, 
-  Clock, 
+import {
+  FileText,
+  Plus,
+  Search,
+  Filter,
+  MapPin,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+  Clock,
   Sparkles,
   ArrowUpDown,
   UploadCloud,
@@ -517,11 +517,10 @@ export default function ClaimsRegistryPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-semibold font-mono ${
-                        claim.claim_type === "IFR" ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30" :
-                        claim.claim_type === "CR" ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30" :
-                        "bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30"
-                      }`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-semibold font-mono ${claim.claim_type === "IFR" ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30" :
+                          claim.claim_type === "CR" ? "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30" :
+                            "bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/30"
+                        }`}>
                         {claim.claim_type}
                       </span>
                     </td>
@@ -596,11 +595,11 @@ export default function ClaimsRegistryPage() {
                   Upload official Patta/Application, scan via camera, or enter manually. AI OCR automatically extracts applicant details and verifies scheme eligibility.
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   stopCamera();
                   setShowCreateModal(false);
-                }} 
+                }}
                 className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
               >
                 <X className="w-4 h-4" />
@@ -615,11 +614,10 @@ export default function ClaimsRegistryPage() {
                   stopCamera();
                   setIntakeMode("upload");
                 }}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                  intakeMode === "upload"
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "upload"
                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <UploadCloud className="w-4 h-4" />
                 <span>Upload Document (PDF/Image)</span>
@@ -631,11 +629,10 @@ export default function ClaimsRegistryPage() {
                   setIntakeMode("camera");
                   startCamera();
                 }}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                  intakeMode === "camera"
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "camera"
                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <Camera className="w-4 h-4" />
                 <span>Capture with Camera</span>
@@ -647,11 +644,10 @@ export default function ClaimsRegistryPage() {
                   stopCamera();
                   setIntakeMode("manual");
                 }}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
-                  intakeMode === "manual"
+                className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "manual"
                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
                     : "text-slate-400 hover:text-slate-200"
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4" />
                 <span>Direct Manual Entry</span>
@@ -787,7 +783,7 @@ export default function ClaimsRegistryPage() {
                   <div>
                     <strong className="text-white block">{uploadedDoc.file_name}</strong>
                     <span className="text-[10px] text-emerald-400 font-mono">
-                      OCR Confidence: {( (uploadedDoc.ocr_confidence || 0.92) * 100).toFixed(0)}% • {uploadedDoc.fields?.length || 0} Fields Extracted
+                      OCR Confidence: {((uploadedDoc.ocr_confidence || 0.92) * 100).toFixed(0)}% • {uploadedDoc.fields?.length || 0} Fields Extracted
                     </span>
                   </div>
                 </div>
@@ -827,260 +823,260 @@ export default function ClaimsRegistryPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Claim ID */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Claim ID *</label>
-                      {fieldConfidences.claim_id && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.claim_id * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={formData.claim_id}
-                      onChange={(e) => setFormData({ ...formData, claim_id: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
-                    />
-                  </div>
-
-                  {/* Claim Type */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Claim Type *</label>
-                      {fieldConfidences.claim_type && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.claim_type * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <select
-                      value={formData.claim_type}
-                      onChange={(e) => setFormData({ ...formData, claim_type: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    >
-                      <option value="IFR">IFR (Individual Forest Rights)</option>
-                      <option value="CR">CR (Community Rights)</option>
-                      <option value="CFR">CFR (Community Forest Resource)</option>
-                    </select>
-                  </div>
-
-                  {/* Applicant Name */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Applicant Name *</label>
-                      {fieldConfidences.applicant_name && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.applicant_name * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={formData.applicant_name}
-                      onChange={(e) => setFormData({ ...formData, applicant_name: e.target.value })}
-                      placeholder="e.g. Sanatan Soren"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    />
-                  </div>
-
-                  {/* Father / Husband Name */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Father / Husband Name</label>
-                      {fieldConfidences.father_name && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.father_name * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      value={formData.father_or_husband_name}
-                      onChange={(e) => setFormData({ ...formData, father_or_husband_name: e.target.value })}
-                      placeholder="e.g. Late Budhu Soren"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    />
-                  </div>
-
-                  {/* Age & Gender */}
-                  <div className="grid grid-cols-2 gap-2">
+                    {/* Claim ID */}
                     <div>
-                      <label className="text-slate-400 block mb-1">Age</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Claim ID *</label>
+                        {fieldConfidences.claim_id && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.claim_id * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
                       <input
-                        type="number"
-                        value={formData.age}
-                        onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                        placeholder="48"
+                        type="text"
+                        required
+                        value={formData.claim_id}
+                        onChange={(e) => setFormData({ ...formData, claim_id: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
                       />
                     </div>
+
+                    {/* Claim Type */}
                     <div>
-                      <label className="text-slate-400 block mb-1">Gender</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Claim Type *</label>
+                        {fieldConfidences.claim_type && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.claim_type * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
                       <select
-                        value={formData.gender}
-                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                        value={formData.claim_type}
+                        onChange={(e) => setFormData({ ...formData, claim_type: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
                       >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="IFR">IFR (Individual Forest Rights)</option>
+                        <option value="CR">CR (Community Rights)</option>
+                        <option value="CFR">CFR (Community Forest Resource)</option>
                       </select>
                     </div>
-                  </div>
 
-                  {/* Extent of Forest Land */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Claimed Area (Hectares) *</label>
-                      {fieldConfidences.area && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.area * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={formData.area_claimed}
-                      onChange={(e) => setFormData({ ...formData, area_claimed: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
-                    />
-                  </div>
-
-                  {/* Village */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-400">Village / Gram Sabha *</label>
-                      {fieldConfidences.village && (
-                        <span className="text-[9px] text-emerald-400 font-mono">
-                          {(fieldConfidences.village * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      required
-                      value={formData.village}
-                      onChange={(e) => setFormData({ ...formData, village: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    />
-                  </div>
-
-                  {/* Block */}
-                  <div>
-                    <label className="text-slate-400 block mb-1">Block / Tehsil</label>
-                    <input
-                      type="text"
-                      value={formData.block}
-                      onChange={(e) => setFormData({ ...formData, block: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    />
-                  </div>
-
-                  {/* District & State */}
-                  <div className="grid grid-cols-2 gap-2">
+                    {/* Applicant Name */}
                     <div>
-                      <label className="text-slate-400 block mb-1">District *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Applicant Name *</label>
+                        {fieldConfidences.applicant_name && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.applicant_name * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
-                        value={formData.district}
-                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                        value={formData.applicant_name}
+                        onChange={(e) => setFormData({ ...formData, applicant_name: e.target.value })}
+                        placeholder="e.g. Sanatan Soren"
                         className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
                       />
                     </div>
+
+                    {/* Father / Husband Name */}
                     <div>
-                      <label className="text-slate-400 block mb-1">State *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Father / Husband Name</label>
+                        {fieldConfidences.father_name && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.father_name * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.father_or_husband_name}
+                        onChange={(e) => setFormData({ ...formData, father_or_husband_name: e.target.value })}
+                        placeholder="e.g. Late Budhu Soren"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                      />
+                    </div>
+
+                    {/* Age & Gender */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-slate-400 block mb-1">Age</label>
+                        <input
+                          type="number"
+                          value={formData.age}
+                          onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                          placeholder="48"
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-400 block mb-1">Gender</label>
+                        <select
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                        >
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Extent of Forest Land */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Claimed Area (Hectares) *</label>
+                        {fieldConfidences.area && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.area * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        required
+                        value={formData.area_claimed}
+                        onChange={(e) => setFormData({ ...formData, area_claimed: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
+                      />
+                    </div>
+
+                    {/* Village */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-slate-400">Village / Gram Sabha *</label>
+                        {fieldConfidences.village && (
+                          <span className="text-[9px] text-emerald-400 font-mono">
+                            {(fieldConfidences.village * 100).toFixed(0)}% conf
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
-                        value={formData.state}
-                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                        value={formData.village}
+                        onChange={(e) => setFormData({ ...formData, village: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
                       />
                     </div>
-                  </div>
 
-                  {/* Survey Number */}
-                  <div>
-                    <label className="text-slate-400 block mb-1">Survey / Khasra No.</label>
-                    <input
-                      type="text"
-                      value={formData.survey_number}
-                      onChange={(e) => setFormData({ ...formData, survey_number: e.target.value })}
-                      placeholder="e.g. PLOT-889/B"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
-                    />
-                  </div>
+                    {/* Block */}
+                    <div>
+                      <label className="text-slate-400 block mb-1">Block / Tehsil</label>
+                      <input
+                        type="text"
+                        value={formData.block}
+                        onChange={(e) => setFormData({ ...formData, block: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                      />
+                    </div>
 
-                  {/* Land Use */}
-                  <div className="md:col-span-2">
-                    <label className="text-slate-400 block mb-1">Primary Land Use</label>
-                    <input
-                      type="text"
-                      value={formData.land_use}
-                      onChange={(e) => setFormData({ ...formData, land_use: e.target.value })}
-                      placeholder="e.g. Traditional Agriculture & Homestead"
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                    />
+                    {/* District & State */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-slate-400 block mb-1">District *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.district}
+                          onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-slate-400 block mb-1">State *</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Survey Number */}
+                    <div>
+                      <label className="text-slate-400 block mb-1">Survey / Khasra No.</label>
+                      <input
+                        type="text"
+                        value={formData.survey_number}
+                        onChange={(e) => setFormData({ ...formData, survey_number: e.target.value })}
+                        placeholder="e.g. PLOT-889/B"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
+                      />
+                    </div>
+
+                    {/* Land Use */}
+                    <div className="md:col-span-2">
+                      <label className="text-slate-400 block mb-1">Primary Land Use</label>
+                      <input
+                        type="text"
+                        value={formData.land_use}
+                        onChange={(e) => setFormData({ ...formData, land_use: e.target.value })}
+                        placeholder="e.g. Traditional Agriculture & Homestead"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Modal Actions */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                {/* Modal Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      stopCamera();
+                      setShowCreateModal(false);
+                    }}
+                    className="px-4 py-2 rounded-2xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={formSubmitting || ocrLoading}
+                    className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition-all hover:scale-[1.02]"
+                  >
+                    {formSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Registering & Evaluating Schemes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Submit Claim & Run AI Scheme Evaluation</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Initial State Cancel Button for Upload/Camera tabs */}
+            {intakeMode !== "manual" && !uploadedDoc && !ocrLoading && (
+              <div className="flex justify-end pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => {
                     stopCamera();
                     setShowCreateModal(false);
                   }}
-                  className="px-4 py-2 rounded-2xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800"
+                  className="px-4 py-2 rounded-2xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 text-xs"
                 >
                   Cancel
                 </button>
-
-                <button
-                  type="submit"
-                  disabled={formSubmitting || ocrLoading}
-                  className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-2 shadow-lg shadow-emerald-950/50 transition-all hover:scale-[1.02]"
-                >
-                  {formSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Registering & Evaluating Schemes...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>Submit Claim & Run AI Scheme Evaluation</span>
-                    </>
-                  )}
-                </button>
               </div>
-            </form>
-          )}
-
-          {/* Initial State Cancel Button for Upload/Camera tabs */}
-          {intakeMode !== "manual" && !uploadedDoc && !ocrLoading && (
-            <div className="flex justify-end pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  stopCamera();
-                  setShowCreateModal(false);
-                }}
-                className="px-4 py-2 rounded-2xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 text-xs"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+            )}
           </div>
         </div>
       )}
@@ -1122,11 +1118,10 @@ export default function ClaimsRegistryPage() {
                         </div>
                         <p className="text-[11px] text-slate-400 truncate max-w-xs">{rec.benefits}</p>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${
-                        rec.eligibility_status === "ELIGIBLE" ? "bg-emerald-500/20 text-emerald-300" :
-                        rec.eligibility_status === "CONDITIONAL" ? "bg-amber-500/20 text-amber-300" :
-                        "bg-slate-800 text-slate-400"
-                      }`}>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded shrink-0 ${rec.eligibility_status === "ELIGIBLE" ? "bg-emerald-500/20 text-emerald-300" :
+                          rec.eligibility_status === "CONDITIONAL" ? "bg-amber-500/20 text-amber-300" :
+                            "bg-slate-800 text-slate-400"
+                        }`}>
                         {rec.eligibility_score}% Match
                       </span>
                     </div>
@@ -1228,9 +1223,8 @@ export default function ClaimsRegistryPage() {
             )}
 
             {bulkResult && (
-              <div className={`p-4 rounded-2xl border text-xs space-y-1.5 ${
-                bulkResult.error ? "bg-rose-500/10 border-rose-500/30 text-rose-300" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-              }`}>
+              <div className={`p-4 rounded-2xl border text-xs space-y-1.5 ${bulkResult.error ? "bg-rose-500/10 border-rose-500/30 text-rose-300" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                }`}>
                 {bulkResult.error ? (
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
