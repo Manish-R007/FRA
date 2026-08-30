@@ -3,13 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  Trees, 
-  Lock, 
-  Mail, 
-  ArrowRight, 
-  Sparkles, 
-  UserCheck, 
+import {
+  Trees,
+  Lock,
+  Mail,
+  ArrowRight,
+  Sparkles,
+  UserCheck,
   Award,
   ShieldCheck
 } from "lucide-react";
@@ -18,10 +18,10 @@ import { setAuthSession } from "@/lib/auth";
 
 const QUICK_ROLES = [
   { role: "ADMIN", name: "Dr. Rajesh K. Meena", email: "admin@fra.gov.in", desc: "MoTA Admin HQ" },
-  { role: "STATE_OFFICER", name: "Smt. Shanti Murmu", email: "state.officer@fra.gov.in", desc: "Odisha State Cell" },
-  { role: "DISTRICT_OFFICER", name: "Shri Ashok Pattnaik", email: "district.officer@fra.gov.in", desc: "Mayurbhanj Collector" },
-  { role: "FIELD_OFFICER", name: "Shri Debendra Majhi", email: "field.officer@fra.gov.in", desc: "Baripada Field Unit" },
-  { role: "ANALYST", name: "Ananya Sen", email: "analyst@fra.gov.in", desc: "GIS & Remote Sensing" },
+  { role: "STATE_OFFICER_ODISHA", name: "Smt. Shanti Murmu", email: "state.officer@fra.gov.in", desc: "Odisha State Cell" },
+  { role: "STATE_OFFICER_MP", name: "Smt. Anusuiya Uikey", email: "state.mp@fra.gov.in", desc: "Madhya Pradesh State Cell" },
+  { role: "STATE_OFFICER_KARNATAKA", name: "Shri Basavaraj Gowda", email: "state.karnataka@fra.gov.in", desc: "Karnataka State Cell" },
+  { role: "STATE_OFFICER_TELANGANA", name: "Shri K. Ramulu", email: "state.telangana@fra.gov.in", desc: "Telangana State Cell" },
   { role: "CITIZEN", name: "Birsa Munda", email: "citizen@fra.gov.in", desc: "Beneficiary Claimant" },
 ];
 
@@ -50,10 +50,7 @@ export default function LoginPage() {
   const handleQuickSelect = (preset: typeof QUICK_ROLES[0]) => {
     setEmail(preset.email);
     let pass = "Admin@2025!";
-    if (preset.role === "STATE_OFFICER") pass = "State@2025!";
-    else if (preset.role === "DISTRICT_OFFICER") pass = "District@2025!";
-    else if (preset.role === "FIELD_OFFICER") pass = "Field@2025!";
-    else if (preset.role === "ANALYST") pass = "Analyst@2025!";
+    if (preset.role.startsWith("STATE_OFFICER")) pass = "State@2025!";
     else if (preset.role === "CITIZEN") pass = "Citizen@2025!";
     setPassword(pass);
   };
@@ -130,11 +127,10 @@ export default function LoginPage() {
                   key={q.role}
                   type="button"
                   onClick={() => handleQuickSelect(q)}
-                  className={`p-2 rounded-xl border text-left transition-colors ${
-                    email === q.email
+                  className={`p-2 rounded-xl border text-left transition-colors ${email === q.email
                       ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 font-semibold"
                       : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
-                  }`}
+                    }`}
                 >
                   <strong className="block text-[11px]">{q.role}</strong>
                   <span className="text-[10px] text-slate-500 truncate block">{q.name}</span>

@@ -3,18 +3,18 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  Trees, 
-  MapPin, 
-  FileText, 
-  Bot, 
-  ShieldCheck, 
-  Layers, 
-  User as UserIcon, 
-  LogOut, 
-  Sun, 
-  Moon, 
-  Bell, 
+import {
+  Trees,
+  MapPin,
+  FileText,
+  Bot,
+  ShieldCheck,
+  Layers,
+  User as UserIcon,
+  LogOut,
+  Sun,
+  Moon,
+  Bell,
   Sparkles,
   Award,
   ChevronDown
@@ -22,13 +22,13 @@ import {
 import { getStoredUser, setAuthSession, clearAuthSession } from "@/lib/auth";
 import { User, UserRole } from "@/lib/types";
 
-const ROLE_PRESETS: { role: UserRole; name: string; email: string; desc: string }[] = [
-  { role: "ADMIN", name: "Dr. Rajesh K. Meena", email: "admin@fra.gov.in", desc: "MoTA Admin HQ" },
-  { role: "STATE_OFFICER", name: "Smt. Shanti Murmu", email: "state.officer@fra.gov.in", desc: "Odisha State Cell" },
-  { role: "DISTRICT_OFFICER", name: "Shri Ashok Pattnaik, IAS", email: "district.officer@fra.gov.in", desc: "Mayurbhanj Collector" },
-  { role: "FIELD_OFFICER", name: "Shri Debendra Majhi", email: "field.officer@fra.gov.in", desc: "Baripada Field Unit" },
-  { role: "ANALYST", name: "Ananya Sen", email: "analyst@fra.gov.in", desc: "GIS & Remote Sensing" },
-  { role: "CITIZEN", name: "Birsa Munda", email: "citizen@fra.gov.in", desc: "Beneficiary Claimant" },
+const ROLE_PRESETS: { role: UserRole; name: string; email: string; desc: string; state?: string }[] = [
+  { role: "ADMIN", name: "Dr. Rajesh K. Meena", email: "admin@fra.gov.in", desc: "MoTA Admin HQ", state: "National" },
+  { role: "STATE_OFFICER", name: "Smt. Shanti Murmu", email: "state.officer@fra.gov.in", desc: "Odisha State Cell", state: "Odisha" },
+  { role: "STATE_OFFICER", name: "Smt. Anusuiya Uikey", email: "state.mp@fra.gov.in", desc: "Madhya Pradesh State Cell", state: "Madhya Pradesh" },
+  { role: "STATE_OFFICER", name: "Shri Basavaraj Gowda", email: "state.karnataka@fra.gov.in", desc: "Karnataka State Cell", state: "Karnataka" },
+  { role: "STATE_OFFICER", name: "Shri K. Ramulu", email: "state.telangana@fra.gov.in", desc: "Telangana State Cell", state: "Telangana" },
+  { role: "CITIZEN", name: "Birsa Munda", email: "citizen@fra.gov.in", desc: "Beneficiary Claimant", state: "Odisha" },
 ];
 
 export default function Navbar() {
@@ -62,6 +62,7 @@ export default function Navbar() {
             email: "admin@fra.gov.in",
             role: "ADMIN",
             is_active: true,
+            state: "National"
           };
           setAuthSession("role-token-ADMIN", defaultUser);
           setCurrentUser(defaultUser);
@@ -81,9 +82,6 @@ export default function Navbar() {
   const handleRoleSwitch = async (preset: typeof ROLE_PRESETS[0]) => {
     let password = "Admin@2025!";
     if (preset.role === "STATE_OFFICER") password = "State@2025!";
-    else if (preset.role === "DISTRICT_OFFICER") password = "District@2025!";
-    else if (preset.role === "FIELD_OFFICER") password = "Field@2025!";
-    else if (preset.role === "ANALYST") password = "Analyst@2025!";
     else if (preset.role === "CITIZEN") password = "Citizen@2025!";
 
     try {
@@ -104,10 +102,9 @@ export default function Navbar() {
         email: preset.email,
         role: preset.role,
         is_active: true,
-        district: preset.role.includes("DISTRICT") ? "Mayurbhanj" : undefined,
-        state: preset.role.includes("STATE") ? "Odisha" : undefined,
+        state: preset.state,
       };
-      setAuthSession(`role-token-${preset.role}`, updatedUser);
+      setAuthSession(`role-token-${preset.role}_${preset.state}`, updatedUser);
       setCurrentUser(updatedUser);
     }
     setShowRoleMenu(false);
@@ -163,11 +160,10 @@ export default function Navbar() {
         <nav className="hidden xl:flex items-center gap-1.5 text-sm font-medium">
           <Link
             href="/atlas"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
-              pathname === "/atlas"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${pathname === "/atlas"
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
                 : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
-            }`}
+              }`}
           >
             <MapPin className="w-4 h-4 text-emerald-500" />
             WebGIS Atlas
@@ -175,11 +171,10 @@ export default function Navbar() {
 
           <Link
             href="/claims"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
-              pathname.startsWith("/claims")
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${pathname.startsWith("/claims")
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
                 : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
-            }`}
+              }`}
           >
             <FileText className="w-4 h-4 text-emerald-500" />
             Claims Registry
@@ -187,11 +182,10 @@ export default function Navbar() {
 
           <Link
             href="/dss"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
-              pathname === "/dss"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${pathname === "/dss"
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
                 : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
-            }`}
+              }`}
           >
             <Bot className="w-4 h-4 text-amber-500" />
             DSS Command
@@ -199,11 +193,10 @@ export default function Navbar() {
 
           <Link
             href="/schemes"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
-              pathname === "/schemes"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${pathname === "/schemes"
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
                 : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
-            }`}
+              }`}
           >
             <Layers className="w-4 h-4 text-emerald-500" />
             Schemes
@@ -211,11 +204,10 @@ export default function Navbar() {
 
           <Link
             href="/audit"
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${
-              pathname === "/audit"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all duration-150 ${pathname === "/audit"
                 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold border border-emerald-500/30"
                 : "text-slate-600 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800/40"
-            }`}
+              }`}
           >
             <ShieldCheck className="w-4 h-4 text-blue-500" />
             Audit Vault
@@ -248,11 +240,10 @@ export default function Navbar() {
                     <button
                       key={p.role}
                       onClick={() => handleRoleSwitch(p)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-xs flex flex-col transition-colors ${
-                        currentUser?.role === p.role
+                      className={`w-full text-left px-3 py-2 rounded-lg text-xs flex flex-col transition-colors ${currentUser?.role === p.role
                           ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-semibold"
                           : "hover:bg-emerald-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-300"
-                      }`}
+                        }`}
                     >
                       <span className="font-medium">{p.role}</span>
                       <span className="text-[10px] text-slate-400">{p.desc}</span>

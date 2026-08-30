@@ -64,8 +64,34 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
     # 2. Handle 1-click role tokens from frontend switcher
     if token.startswith("role-token-") or token == "demo-token":
         role_req = token.replace("role-token-", "").upper()
-        if role_req == "DEMO-TOKEN":
-            role_req = "ADMIN"
+        if "ODISHA" in role_req:
+            user = db.query(User).filter(User.role == "STATE_OFFICER", User.state == "Odisha").first()
+            if user:
+                return user
+        elif "MP" in role_req or "MADHYA" in role_req:
+            user = db.query(User).filter(User.role == "STATE_OFFICER", User.state == "Madhya Pradesh").first()
+            if user:
+                return user
+        elif "KARNATAKA" in role_req:
+            user = db.query(User).filter(User.role == "STATE_OFFICER", User.state == "Karnataka").first()
+            if user:
+                return user
+        elif "TELANGANA" in role_req or "TG" in role_req:
+            user = db.query(User).filter(User.role == "STATE_OFFICER", User.state == "Telangana").first()
+            if user:
+                return user
+        elif role_req == "STATE_OFFICER":
+            user = db.query(User).filter(User.role == "STATE_OFFICER", User.state == "Odisha").first()
+            if user:
+                return user
+        elif role_req == "CITIZEN":
+            user = db.query(User).filter(User.role == "CITIZEN").first()
+            if user:
+                return user
+        elif role_req in ["ADMIN", "DEMO-TOKEN"]:
+            user = db.query(User).filter(User.role == "ADMIN").first()
+            if user:
+                return user
         role_user = db.query(User).filter(User.role == role_req).first()
         if role_user:
             return role_user

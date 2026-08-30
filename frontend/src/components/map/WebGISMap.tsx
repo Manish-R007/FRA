@@ -4,20 +4,20 @@ import React, { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
-import { 
-  Layers, 
-  Eye, 
-  EyeOff, 
-  Maximize2, 
-  Minimize2, 
-  MapPin, 
-  Sparkles, 
-  AlertTriangle, 
-  Activity, 
-  Droplets, 
-  Trees, 
-  Wheat, 
-  Home, 
+import {
+  Layers,
+  Eye,
+  EyeOff,
+  Maximize2,
+  Minimize2,
+  MapPin,
+  Sparkles,
+  AlertTriangle,
+  Activity,
+  Droplets,
+  Trees,
+  Wheat,
+  Home,
   Navigation,
   Upload,
   Download,
@@ -103,7 +103,7 @@ export default function WebGISMap({
             if (match) setSelectedFeature(match.properties);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     } else {
       setGeometries(initialGeometries);
       if (selectedClaimId && initialGeometries?.features) {
@@ -196,7 +196,7 @@ export default function WebGISMap({
                 mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 16, duration: 0.8 });
               }
             }
-          } catch (err) {}
+          } catch (err) { }
         }
       },
       mouseover: (e: any) => {
@@ -244,9 +244,9 @@ export default function WebGISMap({
   // Selected feature bbox for Leaflet ImageOverlay: [[minY, minX], [maxY, maxX]]
   const overlayBounds: any = selectedFeature?.bbox
     ? [
-        [selectedFeature.bbox[1], selectedFeature.bbox[0]],
-        [selectedFeature.bbox[3], selectedFeature.bbox[2]],
-      ]
+      [selectedFeature.bbox[1], selectedFeature.bbox[0]],
+      [selectedFeature.bbox[3], selectedFeature.bbox[2]],
+    ]
     : null;
 
   return (
@@ -318,11 +318,10 @@ export default function WebGISMap({
                 <button
                   key={l}
                   onClick={() => setActiveLayer(l)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all duration-150 ${
-                    activeLayer === l
+                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all duration-150 ${activeLayer === l
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-white"
-                  } ${l === "FLAGGED" ? "col-span-2 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30" : ""}`}
+                    } ${l === "FLAGGED" ? "col-span-2 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30" : ""}`}
                 >
                   {l === "FLAGGED" ? "⚠️ Discrepancies" : l}
                 </button>
@@ -341,11 +340,10 @@ export default function WebGISMap({
                 <button
                   key={b.id}
                   onClick={() => setActiveBasemap(b.id as any)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors ${
-                    activeBasemap === b.id
+                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors ${activeBasemap === b.id
                       ? "bg-emerald-700 text-white shadow-sm"
                       : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   {b.label}
                 </button>
@@ -371,11 +369,10 @@ export default function WebGISMap({
                 <button
                   key={idx.id}
                   onClick={() => setActiveIndicesOverlay(idx.id as any)}
-                  className={`px-1.5 py-1 rounded-lg font-mono text-[10px] font-semibold truncate transition-all ${
-                    activeIndicesOverlay === idx.id
+                  className={`px-1.5 py-1 rounded-lg font-mono text-[10px] font-semibold truncate transition-all ${activeIndicesOverlay === idx.id
                       ? "bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 shadow-sm"
                       : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700"
-                  }`}
+                    }`}
                   title={idx.label}
                 >
                   {idx.label}

@@ -34,7 +34,7 @@ def seed_system_essentials(db: Session = None):
         should_close = True
 
     try:
-        # 1. Seed Users (All 6 RBAC roles)
+        # 1. Seed Users (Admin, State Officers for Odisha, MP, Karnataka, Telangana, and Citizen)
         print("1. Initializing RBAC System Users...")
         users_to_create = [
             {
@@ -58,43 +58,43 @@ def seed_system_essentials(db: Session = None):
                 "is_active": True
             },
             {
-                "full_name": "Shri Ashok Pattnaik, IAS",
-                "email": "district.officer@fra.gov.in",
-                "password_hash": get_password_hash("District@2025!"),
-                "role": "DISTRICT_OFFICER",
-                "state": "Odisha",
-                "district": "Mayurbhanj",
-                "village": "District Collectorate",
+                "full_name": "Smt. Anusuiya Uikey",
+                "email": "state.mp@fra.gov.in",
+                "password_hash": get_password_hash("State@2025!"),
+                "role": "STATE_OFFICER",
+                "state": "Madhya Pradesh",
+                "district": "Bhopal",
+                "village": "State Secretariat",
                 "is_active": True
             },
             {
-                "full_name": "Field Officer Unit",
-                "email": "field.officer@fra.gov.in",
-                "password_hash": get_password_hash("Field@2025!"),
-                "role": "FIELD_OFFICER",
-                "state": "Odisha",
-                "district": "Mayurbhanj",
-                "village": "Field Office",
+                "full_name": "Shri Basavaraj Gowda",
+                "email": "state.karnataka@fra.gov.in",
+                "password_hash": get_password_hash("State@2025!"),
+                "role": "STATE_OFFICER",
+                "state": "Karnataka",
+                "district": "Bengaluru",
+                "village": "State Secretariat",
                 "is_active": True
             },
             {
-                "full_name": "Ananya Sen (GIS Lead)",
-                "email": "analyst@fra.gov.in",
-                "password_hash": get_password_hash("Analyst@2025!"),
-                "role": "ANALYST",
-                "state": "National",
-                "district": "Remote Sensing Cell",
-                "village": "NRSC",
+                "full_name": "Shri K. Ramulu",
+                "email": "state.telangana@fra.gov.in",
+                "password_hash": get_password_hash("State@2025!"),
+                "role": "STATE_OFFICER",
+                "state": "Telangana",
+                "district": "Hyderabad",
+                "village": "State Secretariat",
                 "is_active": True
             },
             {
-                "full_name": "Citizen User",
+                "full_name": "Birsa Munda",
                 "email": "citizen@fra.gov.in",
                 "password_hash": get_password_hash("Citizen@2025!"),
                 "role": "CITIZEN",
                 "state": "Odisha",
                 "district": "Mayurbhanj",
-                "village": "Village Area",
+                "village": "Baripada",
                 "is_active": True
             }
         ]
@@ -107,6 +107,15 @@ def seed_system_essentials(db: Session = None):
                 db.commit()
                 db.refresh(user)
                 record_audit(db, action="CREATE_USER", entity="User", entity_id=str(user.id), user_id=None, new_value={"email": user.email, "role": user.role})
+            else:
+                existing.full_name = u_data["full_name"]
+                existing.role = u_data["role"]
+                existing.state = u_data["state"]
+                existing.district = u_data["district"]
+                existing.village = u_data["village"]
+                existing.password_hash = u_data["password_hash"]
+                existing.is_active = True
+                db.commit()
 
         admin_user = db.query(User).filter(User.role == "ADMIN").first()
 
