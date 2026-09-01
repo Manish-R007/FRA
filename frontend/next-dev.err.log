@@ -1,0 +1,1 @@
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: EPERM: operation not permitted, rename 'D:\FRA-atlas-and-DSS\frontend\.next\cache\webpack\client-development\2.pack.gz_' -> 'D:\FRA-atlas-and-DSS\frontend\.next\cache\webpack\client-development\2.pack.gz'

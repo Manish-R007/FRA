@@ -424,7 +424,12 @@ async def upload_geospatial_file(
                 claim = db.query(FRAClaim).filter(FRAClaim.claim_id == claim_id_code).first()
 
                 if not claim:
-                    claimed_area = float(props.get("area_claimed") or props.get("area") or 1.5)
+                    claimed_area = float(
+                        props.get("area_claimed_hectares")
+                        or props.get("area_claimed")
+                        or props.get("area")
+                        or 1.5
+                    )
                     claim = FRAClaim(
                         claim_id=claim_id_code,
                         claim_type=props.get("claim_type", "IFR"),

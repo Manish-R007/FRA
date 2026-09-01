@@ -1,62 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import dynamic from "next/dynamic";
-import "leaflet/dist/leaflet.css";
-import "leaflet-draw/dist/leaflet.draw.css";
-import {
-  Layers,
-  Eye,
-  EyeOff,
-  Maximize2,
-  Minimize2,
-  MapPin,
-  Sparkles,
-  AlertTriangle,
-  Activity,
-  Droplets,
-  Trees,
-  Wheat,
-  Home,
-  Navigation,
-  Upload,
-  Download,
-  Info,
-  CheckCircle2,
-  ExternalLink
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as maplibregl from "maplibre-gl";
+import { type Map as MapLibreMap } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { AlertTriangle, Layers, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { formatArea, getStatusBadgeColor } from "@/lib/utils";
-
-// Dynamically import Leaflet components to avoid SSR window error
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-const GeoJSON = dynamic(
-  () => import("react-leaflet").then((mod) => mod.GeoJSON),
-  { ssr: false }
-);
-const FeatureGroup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.FeatureGroup),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Popup),
-  { ssr: false }
-);
-const ImageOverlay = dynamic(
-  () => import("react-leaflet").then((mod) => mod.ImageOverlay),
-  { ssr: false }
-);
-const MapController = dynamic(
-  () => import("./MapController"),
-  { ssr: false }
-);
 
 interface WebGISMapProps {
   initialGeometries?: any;
@@ -67,496 +17,148 @@ interface WebGISMapProps {
   onGeometrySaved?: (geometry: any) => void;
 }
 
-export default function WebGISMap({
-  initialGeometries,
-  selectedClaimId,
-  onSelectClaim,
-  height = "h-[calc(100vh-64px)]",
-  enableDrawing = true,
-  onGeometrySaved,
-}: WebGISMapProps) {
-  const [geometries, setGeometries] = useState<any>(initialGeometries || null);
-  const [activeBasemap, setActiveBasemap] = useState<"osm" | "satellite">("osm");
-  const [selectedFeature, setSelectedFeature] = useState<any>(null);
-  const [activeLayer, setActiveLayer] = useState<"ALL" | "IFR" | "CR" | "CFR" | "FLAGGED">("ALL");
-  const [showSatelliteOverlay, setShowSatelliteOverlay] = useState(true);
-  const [showAssetsOverlay, setShowAssetsOverlay] = useState(true);
-  const [activeIndicesOverlay, setActiveIndicesOverlay] = useState<"none" | "rgb" | "cir" | "ndvi" | "ndwi" | "ndbi">("none");
-  const [isMounted, setIsMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+type SpectralLayer = "none" | "rgb" | "cir" | "ndvi" | "ndwi" | "ndbi";
+type BoundaryFilter = "ALL" | "IFR" | "CR" | "CFR" | "FLAGGED";
 
-  const mapRef = useRef<any>(null);
+const EMPTY_COLLECTION: any = { type: "FeatureCollection", features: [] };
+
+function featureBounds(feature: any): [[number, number], [number, number]] | null {
+  const bbox = feature?.properties?.bbox;
+  if (Array.isArray(bbox) && bbox.length === 4) return [[bbox[0], bbox[1]], [bbox[2], bbox[3]]];
+  const coordinates: number[][] = [];
+  const walk = (item: any) => {
+    if (!Array.isArray(item)) return;
+    if (typeof item[0] === "number" && typeof item[1] === "number") coordinates.push(item);
+    else item.forEach(walk);
+  };
+  walk(feature?.geometry?.coordinates);
+  if (!coordinates.length) return null;
+  return coordinates.reduce(
+    (bounds, [lng, lat]) => [[Math.min(bounds[0][0], lng), Math.min(bounds[0][1], lat)], [Math.max(bounds[1][0], lng), Math.max(bounds[1][1], lat)]],
+    [[Infinity, Infinity], [-Infinity, -Infinity]] as [[number, number], [number, number]],
+  );
+}
+
+export default function WebGISMap({ initialGeometries, selectedClaimId, onSelectClaim, height = "h-[calc(100vh-64px)]" }: WebGISMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const onSelectClaimRef = useRef(onSelectClaim);
+  const [geometries, setGeometries] = useState<any>(initialGeometries || null);
+  const [selectedFeature, setSelectedFeature] = useState<any>(null);
+  const [activeLayer, setActiveLayer] = useState<BoundaryFilter>("ALL");
+  const [activeIndicesOverlay, setActiveIndicesOverlay] = useState<SpectralLayer>("rgb");
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-    if (!initialGeometries) {
-      fetch("/api/geometries")
-        .then((res) => res.json())
-        .then((data) => {
-          setGeometries(data);
-          if (selectedClaimId && data?.features) {
-            const match = data.features.find(
-              (f: any) =>
-                f.properties?.claim_id?.trim().toLowerCase() === selectedClaimId.trim().toLowerCase() ||
-                String(f.properties?.db_claim_id) === String(selectedClaimId)
-            );
-            if (match) setSelectedFeature(match.properties);
-          }
-        })
-        .catch(() => { });
-    } else {
-      setGeometries(initialGeometries);
-      if (selectedClaimId && initialGeometries?.features) {
-        const match = initialGeometries.features.find(
-          (f: any) =>
-            f.properties?.claim_id?.trim().toLowerCase() === selectedClaimId.trim().toLowerCase() ||
-            String(f.properties?.db_claim_id) === String(selectedClaimId)
-        );
-        if (match) setSelectedFeature(match.properties);
-      }
-    }
-  }, [initialGeometries, selectedClaimId]);
+    onSelectClaimRef.current = onSelectClaim;
+  }, [onSelectClaim]);
 
-  // Styling rule per claim type and discrepancy flag
-  const getFeatureStyle = (feature: any) => {
-    const props = feature.properties || {};
-    const claimType = props.claim_type;
-    const isFlagged = props.flag_for_review;
-    const isSelected = selectedClaimId && props.claim_id === selectedClaimId;
+  useEffect(() => {
+    if (initialGeometries) { setGeometries(initialGeometries); return; }
+    fetch("/api/geometries", { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Unable to load parcel boundaries");
+        return res.json();
+      })
+      .then(setGeometries)
+      .catch(() => setGeometries(EMPTY_COLLECTION));
+  }, [initialGeometries]);
 
-    if (isFlagged) {
-      return {
-        fillColor: "#ef4444",
-        weight: isSelected ? 3 : 2,
-        opacity: 1,
-        color: "#f87171",
-        dashArray: "4, 4",
-        fillOpacity: isSelected ? 0.65 : 0.45,
-      };
-    }
+  const selectFeature = useCallback((feature: any, fly = true) => {
+    if (!feature) return;
+    setSelectedFeature(feature.properties);
+    onSelectClaimRef.current?.(feature.properties?.claim_id);
+    const bounds = featureBounds(feature);
+    if (fly && bounds && mapRef.current) mapRef.current.fitBounds(bounds, { padding: 70, maxZoom: 16, duration: 900 });
+  }, []);
 
-    if (isSelected) {
-      return {
-        fillColor: "#38bdf8",
-        weight: 3,
-        opacity: 1,
-        color: "#0284c7",
-        fillOpacity: 0.7,
-      };
-    }
-
-    switch (claimType) {
-      case "IFR":
-        return {
-          fillColor: "#10b981", // Emerald
-          weight: 2,
-          opacity: 0.9,
-          color: "#059669",
-          fillOpacity: 0.45,
-        };
-      case "CR":
-        return {
-          fillColor: "#f59e0b", // Amber
-          weight: 2,
-          opacity: 0.9,
-          color: "#d97706",
-          fillOpacity: 0.45,
-        };
-      case "CFR":
-        return {
-          fillColor: "#8b5cf6", // Purple
-          weight: 2,
-          opacity: 0.9,
-          color: "#7c3aed",
-          fillOpacity: 0.45,
-        };
-      default:
-        return {
-          fillColor: "#22c55e",
-          weight: 2,
-          opacity: 0.8,
-          color: "#16a34a",
-          fillOpacity: 0.4,
-        };
-    }
-  };
-
-  const onEachFeature = (feature: any, layer: any) => {
-    layer.on({
-      click: (e: any) => {
-        setSelectedFeature(feature.properties);
-        if (onSelectClaim && feature.properties?.claim_id) {
-          onSelectClaim(feature.properties.claim_id);
-        }
-        if (e.target && typeof e.target.getBounds === "function") {
-          try {
-            const bounds = e.target.getBounds();
-            if (bounds && bounds.isValid && bounds.isValid()) {
-              if (mapRef.current) {
-                mapRef.current.flyToBounds(bounds, { padding: [60, 60], maxZoom: 16, duration: 0.8 });
-              }
-            }
-          } catch (err) { }
-        }
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = new maplibregl.Map({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          "sentinel-basemap": { type: "raster", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], tileSize: 256, attribution: "© Esri, Maxar, Earthstar Geographics" },
+        },
+        layers: [
+          { id: "sentinel-basemap", type: "raster", source: "sentinel-basemap" },
+        ],
       },
-      mouseover: (e: any) => {
-        const l = e.target;
-        l.setStyle({
-          weight: 3,
-          fillOpacity: 0.65,
-        });
-      },
-      mouseout: (e: any) => {
-        const l = e.target;
-        l.setStyle(getFeatureStyle(feature));
-      },
+      center: [86.74512, 21.93245], zoom: 12,
     });
-  };
+    mapRef.current = map;
+    map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+    map.on("load", () => {
+      if (mapRef.current !== map) return;
+      map.addSource("fra-parcels", { type: "geojson", data: EMPTY_COLLECTION });
+      map.addLayer({
+        id: "fra-parcels-fill",
+        type: "fill",
+        source: "fra-parcels",
+        paint: {
+          "fill-color": ["case", ["boolean", ["get", "flag_for_review"], false], "#ef4444", ["match", ["get", "claim_type"], "CR", "#f59e0b", "CFR", "#8b5cf6", "#10b981"]],
+          "fill-opacity": 0.62,
+        },
+      });
+      map.addLayer({ id: "fra-parcels-line", type: "line", source: "fra-parcels", paint: { "line-color": "#ffffff", "line-width": 4, "line-opacity": 0.95 } });
+      map.on("click", "fra-parcels-fill", (event: any) => {
+        const feature = event.features?.[0];
+        if (feature) selectFeature(feature);
+      });
+      map.on("mouseenter", "fra-parcels-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "fra-parcels-fill", () => { map.getCanvas().style.cursor = ""; });
+      setMapReady(true);
+    });
+    return () => {
+      if (mapRef.current === map) mapRef.current = null;
+      map.remove();
+    };
+  }, [selectFeature]);
 
-  // Filter features by active layer
-  const filteredFeatures = geometries?.features?.filter((f: any) => {
-    if (activeLayer === "ALL") return true;
-    if (activeLayer === "FLAGGED") return f.properties?.flag_for_review;
-    return f.properties?.claim_type === activeLayer;
-  });
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const map = mapRef.current;
+    const filtered = (geometries?.features || []).filter((feature: any) => activeLayer === "ALL" || (activeLayer === "FLAGGED" ? feature.properties?.flag_for_review : feature.properties?.claim_type === activeLayer));
+    const parcelSource = map.getSource("fra-parcels") as maplibregl.GeoJSONSource | undefined;
+    if (!parcelSource) return;
+    parcelSource.setData({ ...EMPTY_COLLECTION, features: filtered } as any);
+    const normalizedSelectedId = String(selectedClaimId || "").trim().toLowerCase();
+    const selected = (geometries?.features || []).find((feature: any) => String(feature.properties?.claim_id || "").trim().toLowerCase() === normalizedSelectedId || String(feature.properties?.db_claim_id) === String(selectedClaimId));
+    if (selected) selectFeature(selected, true);
+    else if (filtered.length && !selectedClaimId) {
+      const allBounds = filtered.map(featureBounds).filter(Boolean) as [[number, number], [number, number]][];
+      if (allBounds.length) map.fitBounds(allBounds.reduce((a, b) => [[Math.min(a[0][0], b[0][0]), Math.min(a[0][1], b[0][1])], [Math.max(a[1][0], b[1][0]), Math.max(a[1][1], b[1][1])]]), { padding: 60, maxZoom: 15, duration: 0 });
+    }
+  }, [activeLayer, geometries, mapReady, selectedClaimId, selectFeature]);
 
-  const filteredGeoJSON = geometries
-    ? { ...geometries, features: filteredFeatures || [] }
-    : null;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+    if (map.getLayer("sentinel-2-raster")) map.removeLayer("sentinel-2-raster");
+    if (map.getSource("sentinel-2-raster")) map.removeSource("sentinel-2-raster");
+    const feature = (geometries?.features || []).find((item: any) => item.properties?.claim_id === selectedFeature?.claim_id || String(item.properties?.db_claim_id) === String(selectedFeature?.db_claim_id));
+    const bounds = featureBounds(feature);
+    if (!feature || !bounds || activeIndicesOverlay === "none") return;
+    const id = feature.properties?.db_claim_id || feature.properties?.claim_id;
+    const image = `/api/sentinel/image/${id}/${activeIndicesOverlay}?refresh=true&v=${encodeURIComponent(feature.properties?.satellite_date || "latest")}`;
+    map.addSource("sentinel-2-raster", { type: "image", url: image, coordinates: [[bounds[0][0], bounds[1][1]], [bounds[1][0], bounds[1][1]], [bounds[1][0], bounds[0][1]], [bounds[0][0], bounds[0][1]]] });
+    map.addLayer({ id: "sentinel-2-raster", type: "raster", source: "sentinel-2-raster", paint: { "raster-opacity": 0.94 } }, "fra-parcels-fill");
+  }, [activeIndicesOverlay, geometries, mapReady, selectedFeature]);
 
-  if (!isMounted) {
-    return (
-      <div className={`w-full ${height} bg-slate-950 flex items-center justify-center text-slate-400`}>
-        <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading FRA WebGIS Atlas...</span>
-        </div>
+  const visibleCount = (geometries?.features || []).filter((feature: any) => activeLayer === "ALL" || (activeLayer === "FLAGGED" ? feature.properties?.flag_for_review : feature.properties?.claim_type === activeLayer)).length;
+
+  return <div className={`relative w-full ${height} overflow-hidden bg-slate-950`}>
+    <div ref={containerRef} className="maplibre-container absolute inset-0" aria-label="Copernicus Sentinel-2 WebGIS map" />
+    <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+      <div className="glass-panel p-3 rounded-xl shadow-xl w-64 text-xs space-y-3">
+        <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2"><span className="flex items-center gap-1.5"><Layers className="w-4 h-4 text-emerald-500" /> FRA Atlas Layers</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 font-mono">{visibleCount} Parcels</span></div>
+        <div><label className="text-[10px] font-semibold text-slate-500 uppercase">Boundary Category</label><div className="grid grid-cols-3 gap-1 mt-1">{(["ALL", "IFR", "CR", "CFR", "FLAGGED"] as BoundaryFilter[]).map((item) => <button key={item} onClick={() => setActiveLayer(item)} className={`px-2 py-1 rounded-lg text-[11px] font-semibold ${activeLayer === item ? "bg-emerald-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"} ${item === "FLAGGED" ? "col-span-2 border border-rose-300" : ""}`}>{item === "FLAGGED" ? "⚠ Discrepancies" : item}</button>)}</div></div>
+        <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800"><label className="text-[10px] font-semibold text-slate-500 uppercase flex items-center justify-between">Sentinel-2 spectral layers <Sparkles className="w-3 h-3 text-emerald-600" /></label><div className="grid grid-cols-3 gap-1">{([{ id: "none", label: "Vector only" }, { id: "rgb", label: "RGB (B4,B3,B2)" }, { id: "cir", label: "CIR (B8,B4,B3)" }, { id: "ndvi", label: "NDVI (Veg)" }, { id: "ndwi", label: "NDWI (Water)" }, { id: "ndbi", label: "NDBI (Built)" }] as { id: SpectralLayer; label: string }[]).map((item) => <button key={item.id} title={item.label} onClick={() => setActiveIndicesOverlay(item.id)} className={`px-1 py-1 rounded-lg font-mono text-[9px] truncate ${activeIndicesOverlay === item.id ? "bg-emerald-500/20 text-emerald-700 border border-emerald-500/40" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>{item.label}</button>)}</div></div>
       </div>
-    );
-  }
-
-  // Base tile URLs
-  const basemapUrls = {
-    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    satellite: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  };
-
-  // Selected feature bbox for Leaflet ImageOverlay: [[minY, minX], [maxY, maxX]]
-  const overlayBounds: any = selectedFeature?.bbox
-    ? [
-      [selectedFeature.bbox[1], selectedFeature.bbox[0]],
-      [selectedFeature.bbox[3], selectedFeature.bbox[2]],
-    ]
-    : null;
-
-  return (
-    <div className={`relative w-full ${height} overflow-hidden`}>
-      {/* Map Component */}
-      <MapContainer
-        center={[21.93245, 86.74512]}
-        zoom={13}
-        className="w-full h-full z-0"
-        ref={mapRef}
-      >
-        <MapController
-          selectedClaimId={selectedClaimId}
-          geometries={geometries}
-          onFeatureFound={(props) => {
-            setSelectedFeature(props);
-          }}
-          autoFitAll={true}
-        />
-
-        <TileLayer
-          url={basemapUrls[activeBasemap]}
-          attribution={
-            activeBasemap === "satellite"
-              ? '&copy; Esri, Maxar, Earthstar Geographics | Copernicus Sentinel-2 L2A MoTA WebGIS'
-              : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | MoTA WebGIS'
-          }
-        />
-
-        {filteredGeoJSON && (
-          <GeoJSON
-            key={`${activeLayer}-${activeBasemap}-${filteredGeoJSON.features.length}`}
-            data={filteredGeoJSON}
-            style={getFeatureStyle}
-            onEachFeature={onEachFeature}
-          />
-        )}
-
-        {/* Live Sentinel Hub Raster ImageOverlay */}
-        {selectedFeature && activeIndicesOverlay !== "none" && overlayBounds && (
-          <ImageOverlay
-            url={`/api/sentinel/image/${selectedFeature.db_claim_id || selectedFeature.claim_id}/${activeIndicesOverlay}`}
-            bounds={overlayBounds}
-            opacity={0.88}
-            zIndex={450}
-          />
-        )}
-      </MapContainer>
-
-      {/* Floating Layer Controls Panel (Top Left) */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        {/* Layer Toggles Card */}
-        <div className="glass-panel p-3 rounded-xl shadow-xl w-64 text-xs space-y-3">
-          <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2">
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-emerald-500" />
-              FRA Atlas Layers
-            </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">
-              {filteredFeatures?.length || 0} Parcels
-            </span>
-          </div>
-
-          {/* Filter By Claim Type */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Boundary Category</label>
-            <div className="grid grid-cols-3 gap-1">
-              {(["ALL", "IFR", "CR", "CFR", "FLAGGED"] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setActiveLayer(l)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all duration-150 ${activeLayer === l
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-white"
-                    } ${l === "FLAGGED" ? "col-span-2 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30" : ""}`}
-                >
-                  {l === "FLAGGED" ? "⚠️ Discrepancies" : l}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Basemap Selection */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Basemap Style</label>
-            <div className="grid grid-cols-2 gap-1">
-              {[
-                { id: "osm", label: "OSM Standard" },
-                { id: "satellite", label: "Satellite" },
-              ].map((b) => (
-                <button
-                  key={b.id}
-                  onClick={() => setActiveBasemap(b.id as any)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors ${activeBasemap === b.id
-                      ? "bg-emerald-700 text-white shadow-sm"
-                      : "bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-white"
-                    }`}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Copernicus Sentinel-2 Spectral Layers */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800">
-            <label className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase flex items-center justify-between">
-              <span>Sentinel-2 Spectral Layers</span>
-              <Sparkles className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-            </label>
-            <div className="grid grid-cols-3 gap-1 text-[10px]">
-              {[
-                { id: "none", label: "Vector Only" },
-                { id: "rgb", label: "RGB (B4,B3,B2)", color: "text-rose-600 dark:text-rose-400" },
-                { id: "cir", label: "CIR (B8,B4,B3)", color: "text-purple-600 dark:text-purple-400" },
-                { id: "ndvi", label: "NDVI (Veg)", color: "text-emerald-600 dark:text-emerald-400" },
-                { id: "ndwi", label: "NDWI (Water)", color: "text-blue-600 dark:text-blue-400" },
-                { id: "ndbi", label: "NDBI (Built)", color: "text-amber-600 dark:text-amber-400" },
-              ].map((idx) => (
-                <button
-                  key={idx.id}
-                  onClick={() => setActiveIndicesOverlay(idx.id as any)}
-                  className={`px-1.5 py-1 rounded-lg font-mono text-[10px] font-semibold truncate transition-all ${activeIndicesOverlay === idx.id
-                      ? "bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 shadow-sm"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700"
-                    }`}
-                  title={idx.label}
-                >
-                  {idx.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* WebGIS Legend Card */}
-        <div className="glass-panel p-2.5 rounded-xl shadow-lg w-64 text-[11px] space-y-1.5">
-          <span className="font-semibold text-slate-300 text-[10px] uppercase">Legend</span>
-          <div className="grid grid-cols-2 gap-2 text-slate-300">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-500/80 border border-emerald-400"></span>
-              <span>IFR (Individual)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-amber-500/80 border border-amber-400"></span>
-              <span>CR (Community)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-purple-500/80 border border-purple-400"></span>
-              <span>CFR (Resource)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-rose-500/80 border border-rose-400 border-dashed"></span>
-              <span>Area Discrepancy</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Selected Parcel Inspector Floating Drawer (Right Side) */}
-      {selectedFeature && (
-        <div className="absolute top-4 right-4 z-10 w-96 glass-panel-glow p-5 rounded-2xl shadow-2xl space-y-4 animate-in slide-in-from-right-4 duration-200 max-h-[calc(100vh-100px)] overflow-y-auto">
-          <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-base text-emerald-600 dark:text-emerald-400">
-                  {selectedFeature.claim_id}
-                </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${getStatusBadgeColor(selectedFeature.status)}`}>
-                  {selectedFeature.status}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {selectedFeature.village}, {selectedFeature.district}, {selectedFeature.state}
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedFeature(null)}
-              className="text-slate-400 hover:text-slate-200 text-xs px-2 py-1 rounded-md hover:bg-slate-800"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Area Discrepancy Warning if Flagged */}
-          {selectedFeature.flag_for_review && (
-            <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex items-start gap-2.5 text-xs text-rose-300">
-              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div>
-                <strong className="block text-rose-200 font-semibold">Area Discrepancy Flagged</strong>
-                Claimed: {selectedFeature.area_claimed_hectares} Ha vs GIS Boundary: {selectedFeature.calculated_area_hectares} Ha ({selectedFeature.area_difference_percentage}% difference). Field verification required.
-              </div>
-            </div>
-          )}
-
-          {/* Key Claimant & Spatial Metrics */}
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-400 block">Applicant</span>
-              <strong className="text-slate-800 dark:text-slate-200 text-sm">{selectedFeature.applicant_name}</strong>
-              <span className="text-[10px] text-slate-500 block">S/o {selectedFeature.father_or_husband_name || "N/A"}</span>
-            </div>
-
-            <div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800">
-              <span className="text-[10px] text-slate-400 block">GIS Calculated Area</span>
-              <strong className="text-emerald-500 text-sm">{selectedFeature.calculated_area_hectares} Ha</strong>
-              <span className="text-[10px] text-slate-500 block">({(selectedFeature.calculated_area_m2 || 0).toLocaleString()} m²)</span>
-            </div>
-          </div>
-
-          {/* Copernicus Sentinel-2 Spectral Indices Stats */}
-          <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-200 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                Copernicus Sentinel-2 Indices
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">
-                Acq: {selectedFeature.satellite_date || "Pending Analysis"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="bg-slate-950/60 p-2 rounded-xl border border-emerald-500/20">
-                <span className="text-[10px] text-slate-400 block">Mean NDVI</span>
-                <strong className="text-emerald-400 font-mono text-xs">
-                  {selectedFeature.mean_ndvi !== null && selectedFeature.mean_ndvi !== undefined ? Number(selectedFeature.mean_ndvi).toFixed(3) : "Pending"}
-                </strong>
-              </div>
-              <div className="bg-slate-950/60 p-2 rounded-xl border border-blue-500/20">
-                <span className="text-[10px] text-slate-400 block">Mean NDWI</span>
-                <strong className="text-blue-400 font-mono text-xs">
-                  {selectedFeature.mean_ndwi !== null && selectedFeature.mean_ndwi !== undefined ? Number(selectedFeature.mean_ndwi).toFixed(3) : "Pending"}
-                </strong>
-              </div>
-              <div className="bg-slate-950/60 p-2 rounded-xl border border-amber-500/20">
-                <span className="text-[10px] text-slate-400 block">Mean NDBI</span>
-                <strong className="text-amber-400 font-mono text-xs">
-                  {selectedFeature.mean_ndbi !== null && selectedFeature.mean_ndbi !== undefined ? Number(selectedFeature.mean_ndbi).toFixed(3) : "Pending"}
-                </strong>
-              </div>
-            </div>
-          </div>
-
-          {/* Sentinel-2 Land Cover Segmentation Breakdown */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                AI Land-Cover Segmentation
-              </span>
-              <span className="text-[10px] text-slate-500">
-                Confidence: {((selectedFeature.ai_confidence || 0.88) * 100).toFixed(0)}%
-              </span>
-            </div>
-
-            {/* Progress Bars */}
-            <div className="space-y-1.5 text-[11px]">
-              <div>
-                <div className="flex justify-between text-slate-300 mb-0.5">
-                  <span className="flex items-center gap-1"><Trees className="w-3 h-3 text-emerald-500" /> Forest Canopy</span>
-                  <span className="font-mono text-emerald-400">{selectedFeature.forest_percentage || 0}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${selectedFeature.forest_percentage || 0}%` }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-slate-300 mb-0.5">
-                  <span className="flex items-center gap-1"><Wheat className="w-3 h-3 text-lime-500" /> Cultivated Crop</span>
-                  <span className="font-mono text-lime-400">{selectedFeature.crop_percentage || 0}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-lime-500 h-full rounded-full" style={{ width: `${selectedFeature.crop_percentage || 0}%` }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-slate-300 mb-0.5">
-                  <span className="flex items-center gap-1"><Droplets className="w-3 h-3 text-blue-500" /> Water Body</span>
-                  <span className="font-mono text-blue-400">{selectedFeature.water_percentage || 0}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full" style={{ width: `${selectedFeature.water_percentage || 0}%` }}></div>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-slate-300 mb-0.5">
-                  <span className="flex items-center gap-1"><Home className="w-3 h-3 text-rose-500" /> Homestead / Built-up</span>
-                  <span className="font-mono text-rose-400">{selectedFeature.building_percentage || 0}%</span>
-                </div>
-                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-rose-500 h-full rounded-full" style={{ width: `${selectedFeature.building_percentage || 0}%` }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Drilldown Button */}
-          <Link
-            href={`/claims/${selectedFeature.db_claim_id || selectedFeature.claim_id}`}
-            className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all"
-          >
-            <span>Open Claim Workspace</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      )}
+      <div className="glass-panel p-2.5 rounded-xl shadow-lg w-64 text-[11px]"><span className="font-semibold text-slate-500 text-[10px] uppercase">Legend</span><div className="grid grid-cols-2 gap-2 mt-1.5 text-slate-700 dark:text-slate-300"><span>🟩 IFR (Individual)</span><span>🟨 CR (Community)</span><span>🟪 CFR (Resource)</span><span>🟥 Area Discrepancy</span></div></div>
     </div>
-  );
+    {selectedFeature && <div className="absolute top-4 right-4 z-10 w-80 glass-panel-glow p-5 rounded-2xl shadow-2xl space-y-4 max-h-[calc(100vh-100px)] overflow-y-auto"><div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3"><div><div className="flex items-center gap-2"><span className="font-mono font-bold text-base text-emerald-600">{selectedFeature.claim_id}</span><span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${getStatusBadgeColor(selectedFeature.status)}`}>{selectedFeature.status}</span></div><p className="text-xs text-slate-500">{selectedFeature.village}, {selectedFeature.district}, {selectedFeature.state}</p></div><button onClick={() => setSelectedFeature(null)} className="text-slate-500 text-lg">×</button></div>{selectedFeature.flag_for_review && <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex gap-2 text-xs text-rose-600"><AlertTriangle className="w-5 h-5 shrink-0" /> Area discrepancy flagged. Field verification required.</div>}<div className="grid grid-cols-2 gap-3 text-xs"><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">Applicant</span><strong>{selectedFeature.applicant_name}</strong></div><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">GIS area</span><strong className="text-emerald-600">{formatArea(selectedFeature.calculated_area_m2 || 0)}</strong></div></div><div className="rounded-xl border border-emerald-500/20 p-3 text-xs"><div className="font-semibold flex gap-1.5"><Sparkles className="w-4 h-4 text-amber-500" /> Copernicus Sentinel-2</div><p className="mt-1 text-slate-500">Acquisition: {selectedFeature.satellite_date || "loading latest observation"}</p><p className="mt-1 text-slate-500">Active visualization: {activeIndicesOverlay.toUpperCase()}</p></div><Link href={`/claims/${selectedFeature.db_claim_id || selectedFeature.claim_id}`} className="block text-center rounded-xl bg-emerald-600 py-3 text-xs font-semibold text-white">Open Claim Workspace ↗</Link></div>}
+    <div className="absolute bottom-2 right-3 z-10 text-[10px] bg-white/80 dark:bg-slate-900/80 px-2 py-1 rounded text-slate-600">Copernicus Sentinel-2 WebGIS · rendered with MapLibre GL</div>
+  </div>;
 }

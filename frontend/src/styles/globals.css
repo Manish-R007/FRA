@@ -236,10 +236,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
-.light-ui .leaflet-container { background-color: #dbeafe; }
+.light-ui .maplibre-container { background-color: #dbeafe; }
 
-/* Leaflet Container Fixes */
-.leaflet-container {
+/* MapLibre WebGIS container */
+.maplibre-container {
   width: 100%;
   height: 100%;
   z-index: 1;
