@@ -1,0 +1,32 @@
+
+> fra-atlas-frontend@1.0.0 dev
+> next dev --hostname 127.0.0.1 --port 3000
+
+   ▲ Next.js 15.5.23
+   - Local:        http://127.0.0.1:3000
+   - Network:      http://127.0.0.1:3000
+
+ ✓ Starting...
+ ✓ Ready in 5s
+ ○ Compiling /atlas ...
+ ✓ Compiled /atlas in 14s (685 modules)
+ ✓ Compiled in 2s (273 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 8s (1721 modules)
+ GET / 200 in 9251ms
+ ✓ Compiled in 1941ms (1735 modules)
+ GET /atlas 200 in 497ms
+ ✓ Compiled in 1804ms (803 modules)
+ ✓ Compiled /atlas in 403ms (399 modules)
+ GET /atlas 200 in 1299ms
+ GET /atlas 200 in 200ms
+ ✓ Compiled in 1405ms (803 modules)
+ ○ Compiling /claims/[id] ...
+ ✓ Compiled /claims/[id] in 3.1s (1729 modules)
+ GET /claims/1 200 in 5979ms
+ ✓ Compiled in 10s (812 modules)
+ ✓ Compiled in 1412ms (812 modules)
+ ✓ Compiled in 1958ms (812 modules)
+ ✓ Compiled in 1458ms (812 modules)
+ ✓ Compiled in 2s (812 modules)
+[?25h

@@ -322,6 +322,7 @@ def get_sentinel_ndbi(
 def get_sentinel_raster_image(
     parcel_id: str,
     layer_type: str,
+    refresh: bool = Query(default=False, description="Fetch and render the latest available Sentinel-2 observation"),
     db: Session = Depends(get_db)
 ):
     """
@@ -337,8 +338,9 @@ def get_sentinel_raster_image(
     mapped_type = valid_layers[layer_type.lower()]
     file_path = os.path.join(settings.SATELLITE_DIR, f"claim_{claim.claim_id}_{mapped_type}.png")
 
-    if not os.path.exists(file_path):
-        # Auto-generate if not yet rendered
+    if refresh or not os.path.exists(file_path):
+        # A claimant-map refresh always runs the live CDSE pipeline before
+        # Leaflet receives the raster; it never reuses a stale browser image.
         sentinel_hub_client.process_and_compute_parcel(
             claim_id=claim.claim_id,
             geojson_geom=geojson_geom
@@ -350,7 +352,7 @@ def get_sentinel_raster_image(
     return FileResponse(
         file_path,
         media_type="image/png",
-        headers={"Cache-Control": "public, max-age=86400"}
+        headers={"Cache-Control": "no-store"}
     )
 
 

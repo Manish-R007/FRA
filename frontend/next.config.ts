@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  reactStrictMode: false, // Prevents double-mounting Leaflet map instances
+  reactStrictMode: true,
   async rewrites() {
     return [
       {
