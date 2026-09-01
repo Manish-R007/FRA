@@ -144,6 +144,105 @@ def get_geometry_by_id(claim_id_or_geom_id: int, db: Session = Depends(get_db), 
         updated_at=geom.updated_at
     )
 
+def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str, Any], total_area_m2: float, geom_id: int):
+    try:
+        from app.services.sentinel_hub_service import sentinel_hub_client
+        from app.services.segmentation_service import perform_semantic_segmentation, extract_detected_assets
+        from app.services.dss_service import run_dss_for_claim
+        from app.models.satellite import SatelliteAnalysis, LandCoverStatistic, Asset
+
+        sat_res = sentinel_hub_client.process_and_compute_parcel(
+            claim_id=claim.claim_id,
+            geojson_geom=geom_dict
+        )
+
+        sat_analysis = db.query(SatelliteAnalysis).filter(SatelliteAnalysis.claim_id == claim.id).first()
+        if not sat_analysis:
+            sat_analysis = SatelliteAnalysis(
+                claim_id=claim.id,
+                geometry_id=geom_id,
+                satellite_source=sat_res["satellite_source"],
+                acquisition_date=sat_res["acquisition_date"],
+                cloud_percentage=sat_res["cloud_percentage"],
+                image_url=sat_res["raster_urls"]["rgb_url"],
+                false_color_url=sat_res["raster_urls"]["cir_url"],
+                ndvi_url=sat_res["raster_urls"]["ndvi_url"],
+                ndwi_url=sat_res["raster_urls"]["ndwi_url"],
+                ndbi_url=sat_res["raster_urls"]["ndbi_url"],
+                mean_ndvi=sat_res["mean_ndvi"],
+                mean_ndwi=sat_res["mean_ndwi"],
+                mean_ndbi=sat_res["mean_ndbi"],
+                processing_status="COMPLETED",
+                model_name="Copernicus-Sentinel-2-L2A",
+                confidence=0.92
+            )
+            db.add(sat_analysis)
+            db.commit()
+            db.refresh(sat_analysis)
+        else:
+            sat_analysis.acquisition_date = sat_res["acquisition_date"]
+            sat_analysis.cloud_percentage = sat_res["cloud_percentage"]
+            sat_analysis.image_url = sat_res["raster_urls"]["rgb_url"]
+            sat_analysis.false_color_url = sat_res["raster_urls"]["cir_url"]
+            sat_analysis.ndvi_url = sat_res["raster_urls"]["ndvi_url"]
+            sat_analysis.ndwi_url = sat_res["raster_urls"]["ndwi_url"]
+            sat_analysis.ndbi_url = sat_res["raster_urls"]["ndbi_url"]
+            sat_analysis.mean_ndvi = sat_res["mean_ndvi"]
+            sat_analysis.mean_ndwi = sat_res["mean_ndwi"]
+            sat_analysis.mean_ndbi = sat_res["mean_ndbi"]
+            sat_analysis.processing_status = "COMPLETED"
+            db.commit()
+            db.refresh(sat_analysis)
+
+        db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == sat_analysis.id).delete()
+        db.commit()
+
+        seg_mask, stats_list = perform_semantic_segmentation(
+            bands=sat_res["bands"],
+            indices=sat_res["indices"],
+            total_area_m2=total_area_m2
+        )
+        for st in stats_list:
+            stat_rec = LandCoverStatistic(
+                analysis_id=sat_analysis.id,
+                class_name=st["class_name"],
+                pixel_count=st["pixel_count"],
+                area_m2=st["area_m2"],
+                area_hectares=st["area_hectares"],
+                percentage=st["percentage"],
+                confidence=st["confidence"]
+            )
+            db.add(stat_rec)
+        db.commit()
+
+        db.query(Asset).filter(Asset.claim_id == claim.id).delete()
+        db.commit()
+
+        detected_assets = extract_detected_assets(
+            geojson_geom=geom_dict,
+            seg_mask=seg_mask,
+            statistics=stats_list
+        )
+        for ast in detected_assets:
+            asset_rec = Asset(
+                claim_id=claim.id,
+                analysis_id=sat_analysis.id,
+                asset_type=ast["asset_type"],
+                geometry=json.dumps(ast["geometry"]),
+                area_m2=ast.get("area_m2"),
+                confidence=ast.get("confidence", 0.88),
+                model_name="Copernicus-SAM2"
+            )
+            db.add(asset_rec)
+        db.commit()
+
+        run_dss_for_claim(db, claim.id)
+    except Exception:
+        # A geometry submission must not look successfully analysed when CDSE
+        # authentication, scene selection, or pixel processing failed.
+        db.rollback()
+        raise
+
 @router.post("", response_model=FRAGeometryResponse, status_code=status.HTTP_201_CREATED)
 def create_geometry(
     geom_in: FRAGeometryCreate,
@@ -200,6 +299,9 @@ def create_geometry(
     if claim.status in ["UPLOADED", "OCR_PROCESSED", "PENDING_VERIFICATION"]:
         claim.status = "GIS_VALIDATED"
         db.commit()
+
+    # Automatically compute real-time Sentinel-2 remote sensing statistics & DSS scheme convergence
+    _trigger_sentinel_analysis(db, claim, geo_proc["geometry"], geo_proc["calculated_area_m2"], geom_record.id)
 
     record_audit(db, action="ATTACH_GEOMETRY", entity="FRAGeometry", entity_id=str(geom_record.id), user_id=current_user.id, new_value={"calculated_ha": geom_record.calculated_area_hectares, "flag_for_review": geom_record.flag_for_review})
 
@@ -300,6 +402,10 @@ async def upload_geospatial_file(
                 target_claim.status = "GIS_VALIDATED"
 
             db.commit()
+
+            # Auto-trigger Sentinel-2 AI analysis & DSS convergence
+            _trigger_sentinel_analysis(db, target_claim, geo_proc["geometry"], geo_proc["calculated_area_m2"], geom_rec.id)
+
             record_audit(db, action="ATTACH_GEOMETRY_FILE", entity="FRAGeometry", entity_id=str(geom_rec.id or target_claim.id), user_id=current_user.id, new_value={"claim_id": target_claim.claim_id, "calculated_ha": geo_proc["calculated_area_hectares"]})
             processed_records.append({"claim_id": target_claim.claim_id, "area_ha": geo_proc["calculated_area_hectares"]})
         except Exception as e:
@@ -352,6 +458,7 @@ async def upload_geospatial_file(
                     existing_geom.centroid = json.dumps(geo_proc["centroid"])
                     existing_geom.bbox = json.dumps(geo_proc["bbox"])
                     existing_geom.geometry_status = geo_proc["geometry_status"]
+                    geom_target_id = existing_geom.id
                 else:
                     new_geom = FRAGeometry(
                         claim_id=claim.id,
@@ -368,11 +475,18 @@ async def upload_geospatial_file(
                         geometry_status=geo_proc["geometry_status"]
                     )
                     db.add(new_geom)
+                    db.commit()
+                    db.refresh(new_geom)
+                    geom_target_id = new_geom.id
 
                 if claim.status in ["UPLOADED", "OCR_PROCESSED", "PENDING_VERIFICATION"]:
                     claim.status = "GIS_VALIDATED"
 
                 db.commit()
+
+                # Auto-trigger Sentinel-2 AI analysis & DSS convergence
+                _trigger_sentinel_analysis(db, claim, geo_proc["geometry"], geo_proc["calculated_area_m2"], geom_target_id)
+
                 processed_records.append({"claim_id": claim.claim_id, "area_ha": geo_proc["calculated_area_hectares"]})
             except Exception as e:
                 errors.append({"index": idx, "error": str(e)})
