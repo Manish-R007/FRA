@@ -24,3 +24,9 @@
  ○ Compiling /claims/[id] ...
  ✓ Compiled /claims/[id] in 3.1s (1729 modules)
  GET /claims/1 200 in 5979ms
+ ✓ Compiled in 10s (812 modules)
+ ✓ Compiled in 1412ms (812 modules)
+ ✓ Compiled in 1958ms (812 modules)
+ ✓ Compiled in 1458ms (812 modules)
+ ✓ Compiled in 2s (812 modules)
+[?25h

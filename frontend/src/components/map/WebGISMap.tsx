@@ -46,7 +46,9 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
   const [geometries, setGeometries] = useState<any>(initialGeometries || null);
   const [selectedFeature, setSelectedFeature] = useState<any>(null);
   const [activeLayer, setActiveLayer] = useState<BoundaryFilter>("ALL");
-  const [activeIndicesOverlay, setActiveIndicesOverlay] = useState<SpectralLayer>("rgb");
+  // Keep the uploaded survey boundary unobscured on first load.  Spectral
+  // rasters remain available through the existing layer controls.
+  const [activeIndicesOverlay, setActiveIndicesOverlay] = useState<SpectralLayer>("none");
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -92,16 +94,33 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
     map.on("load", () => {
       if (mapRef.current !== map) return;
       map.addSource("fra-parcels", { type: "geojson", data: EMPTY_COLLECTION });
+      map.addSource("fra-selected-parcel", { type: "geojson", data: EMPTY_COLLECTION });
+      // The fill layer remains solely as a transparent interaction target;
+      // it never masks the satellite basemap or the uploaded boundary.
       map.addLayer({
         id: "fra-parcels-fill",
         type: "fill",
         source: "fra-parcels",
+        paint: { "fill-color": "#000000", "fill-opacity": 0 },
+      });
+      map.addLayer({
+        id: "fra-parcels-line",
+        type: "line",
+        source: "fra-parcels",
         paint: {
-          "fill-color": ["case", ["boolean", ["get", "flag_for_review"], false], "#ef4444", ["match", ["get", "claim_type"], "CR", "#f59e0b", "CFR", "#8b5cf6", "#10b981"]],
-          "fill-opacity": 0.62,
+          "line-color": ["case", ["boolean", ["get", "flag_for_review"], false], "#ef4444", ["match", ["get", "claim_type"], "CR", "#facc15", "CFR", "#a78bfa", "#10b981"]],
+          "line-width": 3,
+          "line-opacity": 1,
         },
       });
-      map.addLayer({ id: "fra-parcels-line", type: "line", source: "fra-parcels", paint: { "line-color": "#ffffff", "line-width": 4, "line-opacity": 0.95 } });
+      // The currently opened claim is always distinguished by a clear red
+      // outline, while its polygon interior stays transparent.
+      map.addLayer({
+        id: "fra-selected-parcel-line",
+        type: "line",
+        source: "fra-selected-parcel",
+        paint: { "line-color": "#ff0000", "line-width": 6, "line-opacity": 1 },
+      });
       map.on("click", "fra-parcels-fill", (event: any) => {
         const feature = event.features?.[0];
         if (feature) selectFeature(feature);
@@ -133,6 +152,24 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
   }, [activeLayer, geometries, mapReady, selectedClaimId, selectFeature]);
 
   useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+    const selectedSource = mapRef.current.getSource("fra-selected-parcel") as maplibregl.GeoJSONSource | undefined;
+    if (!selectedSource) return;
+
+    const selectedClaimKey = String(selectedFeature?.claim_id || selectedClaimId || "").trim().toLowerCase();
+    const selectedDbId = String(selectedFeature?.db_claim_id || "").trim();
+    const selected = (geometries?.features || []).find((feature: any) => {
+      const featureClaimKey = String(feature.properties?.claim_id || "").trim().toLowerCase();
+      const featureDbId = String(feature.properties?.db_claim_id || "").trim();
+      return (selectedClaimKey !== "" && featureClaimKey === selectedClaimKey)
+        || (selectedDbId !== "" && featureDbId === selectedDbId);
+    });
+    selectedSource.setData(selected
+      ? { type: "FeatureCollection", features: [selected] }
+      : EMPTY_COLLECTION);
+  }, [geometries, mapReady, selectedClaimId, selectedFeature]);
+
+  useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map) return;
     if (map.getLayer("sentinel-2-raster")) map.removeLayer("sentinel-2-raster");
@@ -158,7 +195,7 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
       </div>
       <div className="glass-panel p-2.5 rounded-xl shadow-lg w-64 text-[11px]"><span className="font-semibold text-slate-500 text-[10px] uppercase">Legend</span><div className="grid grid-cols-2 gap-2 mt-1.5 text-slate-700 dark:text-slate-300"><span>🟩 IFR (Individual)</span><span>🟨 CR (Community)</span><span>🟪 CFR (Resource)</span><span>🟥 Area Discrepancy</span></div></div>
     </div>
-    {selectedFeature && <div className="absolute top-4 right-4 z-10 w-80 glass-panel-glow p-5 rounded-2xl shadow-2xl space-y-4 max-h-[calc(100vh-100px)] overflow-y-auto"><div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3"><div><div className="flex items-center gap-2"><span className="font-mono font-bold text-base text-emerald-600">{selectedFeature.claim_id}</span><span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${getStatusBadgeColor(selectedFeature.status)}`}>{selectedFeature.status}</span></div><p className="text-xs text-slate-500">{selectedFeature.village}, {selectedFeature.district}, {selectedFeature.state}</p></div><button onClick={() => setSelectedFeature(null)} className="text-slate-500 text-lg">×</button></div>{selectedFeature.flag_for_review && <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex gap-2 text-xs text-rose-600"><AlertTriangle className="w-5 h-5 shrink-0" /> Area discrepancy flagged. Field verification required.</div>}<div className="grid grid-cols-2 gap-3 text-xs"><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">Applicant</span><strong>{selectedFeature.applicant_name}</strong></div><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">GIS area</span><strong className="text-emerald-600">{formatArea(selectedFeature.calculated_area_m2 || 0)}</strong></div></div><div className="rounded-xl border border-emerald-500/20 p-3 text-xs"><div className="font-semibold flex gap-1.5"><Sparkles className="w-4 h-4 text-amber-500" /> Copernicus Sentinel-2</div><p className="mt-1 text-slate-500">Acquisition: {selectedFeature.satellite_date || "loading latest observation"}</p><p className="mt-1 text-slate-500">Active visualization: {activeIndicesOverlay.toUpperCase()}</p></div><Link href={`/claims/${selectedFeature.db_claim_id || selectedFeature.claim_id}`} className="block text-center rounded-xl bg-emerald-600 py-3 text-xs font-semibold text-white">Open Claim Workspace ↗</Link></div>}
+    {selectedFeature && <div className="absolute top-4 right-4 z-10 w-80 glass-panel-glow p-5 rounded-2xl shadow-2xl space-y-4 max-h-[calc(100vh-100px)] overflow-y-auto"><div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3"><div><div className="flex items-center gap-2"><span className="font-mono font-bold text-base text-emerald-600">{selectedFeature.claim_id}</span><span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${getStatusBadgeColor(selectedFeature.status)}`}>{selectedFeature.status}</span></div><p className="text-xs text-slate-500">{selectedFeature.village}, {selectedFeature.district}, {selectedFeature.state}</p></div><button onClick={() => setSelectedFeature(null)} className="text-slate-500 text-lg">×</button></div>{selectedFeature.flag_for_review && <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3 flex gap-2 text-xs text-rose-600"><AlertTriangle className="w-5 h-5 shrink-0" /> Area discrepancy flagged. Field verification required.</div>}<div className="grid grid-cols-2 gap-3 text-xs"><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">Applicant</span><strong>{selectedFeature.applicant_name}</strong></div><div className="bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-xl"><span className="text-slate-500 block">GIS area</span><strong className="text-emerald-600">{formatArea(selectedFeature.calculated_area_hectares || 0)}</strong></div></div><div className="rounded-xl border border-emerald-500/20 p-3 text-xs"><div className="font-semibold flex gap-1.5"><Sparkles className="w-4 h-4 text-amber-500" /> Copernicus Sentinel-2</div><p className="mt-1 text-slate-500">Acquisition: {selectedFeature.satellite_date || "loading latest observation"}</p><p className="mt-1 text-slate-500">Active visualization: {activeIndicesOverlay.toUpperCase()}</p></div><Link href={`/claims/${selectedFeature.db_claim_id || selectedFeature.claim_id}`} className="block text-center rounded-xl bg-emerald-600 py-3 text-xs font-semibold text-white">Open Claim Workspace ↗</Link></div>}
     <div className="absolute bottom-2 right-3 z-10 text-[10px] bg-white/80 dark:bg-slate-900/80 px-2 py-1 rounded text-slate-600">Copernicus Sentinel-2 WebGIS · rendered with MapLibre GL</div>
   </div>;
 }
