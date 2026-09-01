@@ -41,6 +41,7 @@ class SentinelLayerMetadata(BaseModel):
     ]
     parcel_area_hectares: Optional[float] = None
     bounds: Optional[List[float]] = None
+    available_preview_layers: List[str] = []
 
 class SentinelStatisticsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -60,7 +61,7 @@ class SentinelLayerResponse(BaseModel):
     parcel_id: int
     layer_type: str
     layer_name: str
-    image_url: str
+    image_url: Optional[str] = None
     metadata: SentinelLayerMetadata
 
 class SentinelProcessResponse(BaseModel):
@@ -72,11 +73,11 @@ class SentinelProcessResponse(BaseModel):
     satellite_source: str
     acquisition_date: str
     cloud_percentage: float
-    image_url: str
-    false_color_url: str
-    ndvi_url: str
-    ndwi_url: str
-    ndbi_url: str
+    image_url: Optional[str] = None
+    false_color_url: Optional[str] = None
+    ndvi_url: Optional[str] = None
+    ndwi_url: Optional[str] = None
+    ndbi_url: Optional[str] = None
     mean_ndvi: float
     mean_ndwi: float
     mean_ndbi: float

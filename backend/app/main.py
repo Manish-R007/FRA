@@ -1,11 +1,13 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
 from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats, sentinel
 from app.models.user import User
+from app.services.sentinel_hub_service import LiveSentinelDataUnavailable
 
 # Initialize tables
 Base.metadata.create_all(bind=engine)
@@ -17,6 +19,12 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+
+@app.exception_handler(LiveSentinelDataUnavailable)
+async def live_sentinel_unavailable(_: Request, exc: LiveSentinelDataUnavailable):
+    """Never substitute synthetic data when a live observation cannot be obtained."""
+    return JSONResponse(status_code=503, content={"detail": str(exc), "source": "Copernicus Sentinel-2 L2A"})
 
 # CORS middleware for frontend access
 app.add_middleware(

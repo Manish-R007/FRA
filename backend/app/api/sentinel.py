@@ -69,8 +69,8 @@ def _resolve_claim_and_geometry(parcel_id_or_code: str, db: Session) -> tuple[FR
 @router.get("/statistics/{parcel_id}", response_model=SentinelStatisticsResponse)
 def get_sentinel_statistics(
     parcel_id: str,
-    start_date: str = Query(default="2026-01-01", description="Observation start date (YYYY-MM-DD)"),
-    end_date: str = Query(default="2026-08-01", description="Observation end date (YYYY-MM-DD)"),
+    start_date: Optional[str] = Query(default=None, description="Observation start date (YYYY-MM-DD); defaults to the last 180 days"),
+    end_date: Optional[str] = Query(default=None, description="Observation end date (YYYY-MM-DD); defaults to today"),
     max_cloud: float = Query(default=20.0, description="Max cloud cover threshold percentage"),
     resolution: float = Query(default=10.0, description="Spatial resolution in meters (10m default)"),
     veg_threshold: float = Query(default=0.40, description="NDVI threshold for vegetation cover"),
@@ -112,8 +112,8 @@ def get_sentinel_statistics(
 def get_sentinel_true_color(
     parcel_id: str,
     format: str = Query(default="json", description="Response format: 'json' with URL/metadata or 'png' raw image"),
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     resolution: float = Query(default=10.0),
     db: Session = Depends(get_db)
@@ -137,6 +137,8 @@ def get_sentinel_true_color(
         if os.path.exists(rgb_file):
             return FileResponse(rgb_file, media_type="image/png")
         raise HTTPException(status_code=404, detail="True Color raster not found.")
+    if not res["raster_urls"]["rgb_url"]:
+        raise HTTPException(status_code=404, detail="Sentinel-2 returned statistics but no True Color preview for this scene.")
 
     return SentinelLayerResponse(
         claim_id=claim.claim_id,
@@ -152,8 +154,8 @@ def get_sentinel_true_color(
 def get_sentinel_cir(
     parcel_id: str,
     format: str = Query(default="json", description="Response format: 'json' or 'png'"),
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     resolution: float = Query(default=10.0),
     db: Session = Depends(get_db)
@@ -177,6 +179,8 @@ def get_sentinel_cir(
         if os.path.exists(cir_file):
             return FileResponse(cir_file, media_type="image/png")
         raise HTTPException(status_code=404, detail="Color Infrared raster not found.")
+    if not res["raster_urls"]["cir_url"]:
+        raise HTTPException(status_code=404, detail="Sentinel-2 returned statistics but no CIR preview for this scene.")
 
     return SentinelLayerResponse(
         claim_id=claim.claim_id,
@@ -192,8 +196,8 @@ def get_sentinel_cir(
 def get_sentinel_ndvi(
     parcel_id: str,
     format: str = Query(default="json", description="Response format: 'json' or 'png'"),
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     resolution: float = Query(default=10.0),
     db: Session = Depends(get_db)
@@ -217,6 +221,8 @@ def get_sentinel_ndvi(
         if os.path.exists(ndvi_file):
             return FileResponse(ndvi_file, media_type="image/png")
         raise HTTPException(status_code=404, detail="NDVI raster not found.")
+    if not res["raster_urls"]["ndvi_url"]:
+        raise HTTPException(status_code=404, detail="Sentinel-2 returned statistics but no NDVI preview for this scene.")
 
     return SentinelLayerResponse(
         claim_id=claim.claim_id,
@@ -232,8 +238,8 @@ def get_sentinel_ndvi(
 def get_sentinel_ndwi(
     parcel_id: str,
     format: str = Query(default="json", description="Response format: 'json' or 'png'"),
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     resolution: float = Query(default=10.0),
     db: Session = Depends(get_db)
@@ -257,6 +263,8 @@ def get_sentinel_ndwi(
         if os.path.exists(ndwi_file):
             return FileResponse(ndwi_file, media_type="image/png")
         raise HTTPException(status_code=404, detail="NDWI raster not found.")
+    if not res["raster_urls"]["ndwi_url"]:
+        raise HTTPException(status_code=404, detail="Sentinel-2 returned statistics but no NDWI preview for this scene.")
 
     return SentinelLayerResponse(
         claim_id=claim.claim_id,
@@ -272,8 +280,8 @@ def get_sentinel_ndwi(
 def get_sentinel_ndbi(
     parcel_id: str,
     format: str = Query(default="json", description="Response format: 'json' or 'png'"),
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     resolution: float = Query(default=20.0),  # Handled: B11 is a 20m native band
     db: Session = Depends(get_db)
@@ -297,6 +305,8 @@ def get_sentinel_ndbi(
         if os.path.exists(ndbi_file):
             return FileResponse(ndbi_file, media_type="image/png")
         raise HTTPException(status_code=404, detail="NDBI raster not found.")
+    if not res["raster_urls"]["ndbi_url"]:
+        raise HTTPException(status_code=404, detail="Sentinel-2 returned statistics but no NDBI preview for this scene.")
 
     return SentinelLayerResponse(
         claim_id=claim.claim_id,
@@ -347,8 +357,8 @@ def get_sentinel_raster_image(
 @router.post("/process/{parcel_id}", response_model=SentinelProcessResponse)
 def run_sentinel_process_pipeline(
     parcel_id: str,
-    start_date: str = Query(default="2026-01-01"),
-    end_date: str = Query(default="2026-08-01"),
+    start_date: Optional[str] = Query(default=None),
+    end_date: Optional[str] = Query(default=None),
     max_cloud: float = Query(default=20.0),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "ANALYST"]))

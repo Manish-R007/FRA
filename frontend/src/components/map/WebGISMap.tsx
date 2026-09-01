@@ -465,7 +465,7 @@ export default function WebGISMap({
                 Copernicus Sentinel-2 Indices
               </span>
               <span className="text-[10px] text-slate-400 font-mono">
-                Acq: {selectedFeature.satellite_date || "2026-08-01"}
+                Acq: {selectedFeature.satellite_date || "Pending Analysis"}
               </span>
             </div>
 
@@ -473,19 +473,19 @@ export default function WebGISMap({
               <div className="bg-slate-950/60 p-2 rounded-xl border border-emerald-500/20">
                 <span className="text-[10px] text-slate-400 block">Mean NDVI</span>
                 <strong className="text-emerald-400 font-mono text-xs">
-                  {selectedFeature.mean_ndvi !== null && selectedFeature.mean_ndvi !== undefined ? selectedFeature.mean_ndvi : 0.62}
+                  {selectedFeature.mean_ndvi !== null && selectedFeature.mean_ndvi !== undefined ? Number(selectedFeature.mean_ndvi).toFixed(3) : "Pending"}
                 </strong>
               </div>
               <div className="bg-slate-950/60 p-2 rounded-xl border border-blue-500/20">
                 <span className="text-[10px] text-slate-400 block">Mean NDWI</span>
                 <strong className="text-blue-400 font-mono text-xs">
-                  {selectedFeature.mean_ndwi !== null && selectedFeature.mean_ndwi !== undefined ? selectedFeature.mean_ndwi : -0.12}
+                  {selectedFeature.mean_ndwi !== null && selectedFeature.mean_ndwi !== undefined ? Number(selectedFeature.mean_ndwi).toFixed(3) : "Pending"}
                 </strong>
               </div>
               <div className="bg-slate-950/60 p-2 rounded-xl border border-amber-500/20">
                 <span className="text-[10px] text-slate-400 block">Mean NDBI</span>
                 <strong className="text-amber-400 font-mono text-xs">
-                  {selectedFeature.mean_ndbi !== null && selectedFeature.mean_ndbi !== undefined ? selectedFeature.mean_ndbi : -0.24}
+                  {selectedFeature.mean_ndbi !== null && selectedFeature.mean_ndbi !== undefined ? Number(selectedFeature.mean_ndbi).toFixed(3) : "Pending"}
                 </strong>
               </div>
             </div>

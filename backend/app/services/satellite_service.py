@@ -223,15 +223,15 @@ from app.services.sentinel_hub_service import sentinel_hub_client
 def process_satellite_analysis(
     claim_id: str,
     geojson_geom: Dict[str, Any],
-    start_date: str = "2026-01-01",
-    end_date: str = "2026-08-01",
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
     max_cloud_cover: float = 20.0,
     resolution: float = 10.0
 ) -> Dict[str, Any]:
     """
     Full Copernicus Sentinel-2 Remote Sensing Pipeline:
     1. Geometrical validation & exact parcel polygon clipping
-    2. CDSE Sentinel Hub Process API execution / Physical spectral model
+    2. CDSE Sentinel Hub Process API execution using live Sentinel-2 L2A pixels
     3. Spectral indices (NDVI, NDWI, NDBI) computation
     4. Raster rendering & storage (RGB, CIR, NDVI, NDWI, NDBI)
     5. Parcel-level statistics and land-cover area percentages

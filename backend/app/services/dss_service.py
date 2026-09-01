@@ -116,7 +116,12 @@ def evaluate_scheme_for_claim(
 
     if code == "PM-KISAN":
         # PM-KISAN rules: Approved IFR Claim + Agricultural crop land detected
-        if not is_approved:
+        if water_pct >= 75.0:
+            status = "INELIGIBLE"
+            score = 10.0
+            priority = "LOW"
+            reasons.append(f"Parcel is submerged under water body ({water_pct:.1f}% water); arable crop cultivation is not possible on water surface.")
+        elif not is_approved:
             reasons.append("FRA claim title verification is currently pending.")
             status = "CONDITIONAL"
             score = 40.0
@@ -135,7 +140,12 @@ def evaluate_scheme_for_claim(
 
     elif code == "PMKSY":
         # PMKSY (Micro-Irrigation & Farm Ponds): Approved + Crop land + Low water body availability
-        if not is_approved:
+        if water_pct >= 75.0:
+            status = "INELIGIBLE"
+            score = 15.0
+            priority = "LOW"
+            reasons.append(f"Parcel is submerged under water body ({water_pct:.1f}% water); irrigation infrastructure subsidy is not applicable.")
+        elif not is_approved:
             reasons.append("Claim approval required before sanctioning irrigation asset subsidy.")
             status = "CONDITIONAL"
             score = 35.0
@@ -160,7 +170,12 @@ def evaluate_scheme_for_claim(
 
     elif code == "VDVY":
         # Van Dhan Vikas Yojana (MFP/NTFP Tribal Livelihoods)
-        if claim.claim_type in ["CFR", "CR"] or forest_pct > 30.0:
+        if water_pct >= 75.0:
+            status = "INELIGIBLE"
+            score = 10.0
+            priority = "LOW"
+            reasons.append("No terrestrial forest canopy detected on submerged parcel for Minor Forest Produce (MFP) gathering.")
+        elif claim.claim_type in ["CFR", "CR"] or forest_pct > 30.0:
             status = "ELIGIBLE"
             score = 95.0 if claim.claim_type in ["CFR", "CR"] else 85.0
             priority = "HIGH"
@@ -175,7 +190,12 @@ def evaluate_scheme_for_claim(
 
     elif code == "PMAY-G":
         # PMAY-G: Pradhan Mantri Awaas Yojana Gramin
-        if is_approved and (building_pct < 10.0 or bare_pct > 15.0):
+        if water_pct >= 75.0:
+            status = "INELIGIBLE"
+            score = 10.0
+            priority = "LOW"
+            reasons.append("No dry, stable land available on submerged parcel for housing construction.")
+        elif is_approved and (building_pct < 10.0 or bare_pct > 15.0):
             status = "ELIGIBLE"
             score = 82.0
             priority = "HIGH"
@@ -190,7 +210,12 @@ def evaluate_scheme_for_claim(
 
     elif code == "MGNREGA-FRA":
         # Special FRA Land Development under MGNREGA
-        if is_approved:
+        if water_pct >= 75.0:
+            status = "ELIGIBLE"
+            score = 85.0
+            priority = "HIGH"
+            reasons.append(f"Substantial water body detected ({water_pct:.1f}%). Eligible for MGNREGA community desilting, earthen embankment bunding, and freshwater aquaculture/fishery pond development.")
+        elif is_approved:
             status = "ELIGIBLE"
             score = 90.0
             priority = "HIGH"
@@ -201,6 +226,34 @@ def evaluate_scheme_for_claim(
             score = 60.0
             priority = "MEDIUM"
             reasons.append("Eligible for preliminary soil and water conservation works pending final Patta distribution.")
+
+    elif code == "JJM":
+        # Jal Jeevan Mission (Potable Household Drinking Water)
+        # Eligibility: Approved FRA Patta for dwelling/homestead, and critical surface water deficit (< 4.0% water cover, no pond asset)
+        if has_water_asset or water_pct >= 4.0:
+            status = "INELIGIBLE"
+            score = 25.0
+            priority = "LOW"
+            reasons.append(f"Satellite analysis and spatial asset detection confirmed active surface water body / water presence ({water_pct:.1f}% cover) on parcel.")
+            reasons.append("Household water resource is already accessible on-site; individual tap connection prioritization is diverted to water-scarce habitations.")
+            reasons.append("Jal Jeevan Mission (JJM) convergence is targeted specifically at water-stressed households lacking local water sources.")
+        elif not is_approved:
+            status = "CONDITIONAL"
+            score = 40.0
+            priority = "LOW"
+            reasons.append("FRA claim title verification is currently pending for residential tap water sanction.")
+        elif building_pct > 0.0 or claim.claim_type == "IFR":
+            status = "ELIGIBLE"
+            score = 88.0
+            priority = "HIGH"
+            reasons.append("FRA Individual Forest Rights (IFR) title is recognized for tribal homestead.")
+            reasons.append(f"Remote sensing indicates critical surface water deficit (water cover: {water_pct:.1f}%).")
+            reasons.append("No permanent pond or water reservoir detected on parcel; qualifies for 100% subsidized Functional Household Tap Connection (FHTC).")
+        else:
+            status = "ELIGIBLE"
+            score = 70.0
+            priority = "MEDIUM"
+            reasons.append(f"Parcel exhibits surface water deficit ({water_pct:.1f}%). Eligible for village community standpost or piped water supply connection.")
 
     else:
         # Generic Scheme
@@ -263,17 +316,28 @@ def evaluate_scheme_for_claim(
 def run_dss_for_claim(db: Session, claim_id: int) -> List[SchemeRecommendationResponse]:
     """
     Runs complete DSS evaluation for an FRA claim against all active government schemes.
+    Scheme recommendations are ONLY generated if a parcel geometry is uploaded AND satellite analysis is completed.
     """
     claim = db.query(FRAClaim).filter(FRAClaim.id == claim_id).first()
     if not claim:
         raise ValueError(f"Claim with ID {claim_id} not found")
 
-    # Fetch latest satellite analysis and stats
-    analysis = db.query(SatelliteAnalysis).filter(SatelliteAnalysis.claim_id == claim_id).order_by(SatelliteAnalysis.id.desc()).first()
-    stats_dict = {}
-    if analysis:
-        stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
-        stats_dict = {s.class_name: s.percentage for s in stats}
+    # 1. Geometry Check: Scheme recommendations require an uploaded GeoJSON parcel boundary
+    geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == claim_id).first()
+    if not geom or not geom.geometry:
+        return []
+
+    # 2. Satellite Analysis Check: Must be completed
+    analysis = db.query(SatelliteAnalysis).filter(
+        SatelliteAnalysis.claim_id == claim_id,
+        SatelliteAnalysis.processing_status == "COMPLETED"
+    ).order_by(SatelliteAnalysis.id.desc()).first()
+    if not analysis:
+        return []
+
+    # Fetch land-cover statistics
+    stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
+    stats_dict = {s.class_name: s.percentage for s in stats}
 
     # Fetch assets
     assets = db.query(Asset).filter(Asset.claim_id == claim_id).all()
@@ -373,6 +437,14 @@ def calculate_village_convergence(db: Session, district: Optional[str] = None) -
             schemes.append("PM-KISAN")
             priority = "HIGH"
 
+        if mean_water < 4.0:
+            interventions.append("Drinking Water Need: Jal Jeevan Mission (JJM) piped tap water connections")
+            schemes.append("JJM")
+            if priority != "HIGH":
+                priority = "HIGH"
+        elif mean_water >= 8.0:
+            interventions.append("Water Abundant: Community fisheries / pond recharge under MGNREGA")
+
         if mean_forest > 40.0:
             interventions.append("Opportunity: Van Dhan Vikas Kendra for NTFP processing")
             schemes.append("VDVY")
@@ -383,7 +455,7 @@ def calculate_village_convergence(db: Session, district: Optional[str] = None) -
             interventions.append(f"Administrative: Expedite {total_claims - approved_claims} pending FRA Patta titles")
 
         if not schemes:
-            schemes = ["MGNREGA-FRA", "PMAY-G", "JJM"]
+            schemes = ["MGNREGA-FRA", "PMAY-G"]
 
         # Approximate coordinates based on district/village
         coords = [86.75 + (hash(village) % 50) * 0.01, 21.90 + (hash(dist) % 50) * 0.01]
@@ -469,8 +541,8 @@ def answer_dss_query(db: Session, query_req: DSSQueryRequest) -> DSSQueryRespons
 
         # Check if query targets specific schemes
         targeted_codes = []
-        for code in ["PM-KISAN", "PMKSY", "VDVY", "PMAY-G", "MGNREGA-FRA"]:
-            if code.lower() in q or code.replace("-", "").lower() in q.replace("-", "") or code.replace("-FRA", "").lower() in q:
+        for code in ["PM-KISAN", "PMKSY", "VDVY", "PMAY-G", "MGNREGA-FRA", "JJM"]:
+            if code.lower() in q or code.replace("-", "").lower() in q.replace("-", "") or code.replace("-FRA", "").lower() in q or ("jal jeevan" in q and code == "JJM"):
                 targeted_codes.append(code)
 
         display_recs = [r for r in recs if r.scheme_code in targeted_codes] if targeted_codes else recs
@@ -851,12 +923,13 @@ RESPONSE STRUCTURE:
             "PM-KISAN": "PM-KISAN: Direct income support of ₹6,000/year in 3 installments. Requires approved FRA Individual Forest Rights (IFR) title and active agricultural cultivation on parcel.",
             "PMKSY": "PMKSY (Per Drop More Crop): Micro-irrigation subsidy (up to 85%) and 100% subsidized farm ponds. Prioritizes approved FRA parcels with active crops but surface water deficit (<5% water).",
             "PMAY-G": "PMAY-Gramin: Housing grant of ₹1.30 Lakh + 90 days MGNREGA labor. Requires approved FRA homestead rights and lack of existing pucca house.",
-            "MGNREGA-FRA": "MGNREGA Special FRA Convergence: 150 days guaranteed wage labor + material grant for land bunding, leveling, well deepening, and farm ponds."
+            "MGNREGA-FRA": "MGNREGA Special FRA Convergence: 150 days guaranteed wage labor + material grant for land bunding, leveling, well deepening, and farm ponds.",
+            "JJM": "Jal Jeevan Mission (JJM - Har Ghar Jal): 100% grant for Functional Household Tap Connection (FHTC) providing 55 lpcd clean drinking water. Prioritizes approved FRA habitations experiencing surface water deficit (<4% water cover and no local pond/water body on parcel)."
         }
 
         matched_scheme_info = ""
         for code, info in schemes_info.items():
-            if code.lower() in q_lower or code.replace("-", "").lower() in q_lower or ("van dhan" in q_lower and code == "VDVY") or ("kisan" in q_lower and code == "PM-KISAN") or ("irrigation" in q_lower and code == "PMKSY") or ("housing" in q_lower and code == "PMAY-G"):
+            if code.lower() in q_lower or code.replace("-", "").lower() in q_lower or ("van dhan" in q_lower and code == "VDVY") or ("kisan" in q_lower and code == "PM-KISAN") or ("irrigation" in q_lower and code == "PMKSY") or ("housing" in q_lower and code == "PMAY-G") or (("jal jeevan" in q_lower or "drinking water" in q_lower or "tap" in q_lower) and code == "JJM"):
                 matched_scheme_info = info
                 break
 
@@ -867,7 +940,7 @@ CORE RULE: Keep your answers CONCISE, DIRECT, ACCURATE, and EASY TO UNDERSTAND (
 DO NOT dump tables of all villages unless explicitly asked to "list all villages".
 
 SCHEME POLICY CONTEXT:
-{matched_scheme_info or 'Available schemes: PM-KISAN (₹6,000/yr agri income), PMKSY (85% drip irrigation), VDVY (₹15L Van Dhan MFP cluster grant), PMAY-G (₹1.30L housing grant), MGNREGA (150 days labor).'}
+{matched_scheme_info or 'Available schemes: PM-KISAN (₹6,000/yr agri income), PMKSY (85% drip irrigation), VDVY (₹15L Van Dhan MFP cluster grant), PMAY-G (₹1.30L housing grant), MGNREGA (150 days labor), JJM (drinking water tap connection for water-stressed habitations).'}
 
 INSTRUCTIONS:
 1. If asked "Am I eligible for [Scheme]?" without mentioning a claim or name:
