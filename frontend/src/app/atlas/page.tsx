@@ -36,7 +36,7 @@ function AtlasContent() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
-    api.getClaims({ limit: 100 })
+    api.getClaims({ limit: 500 })
       .then((data) => setClaimsList(data))
       .catch(() => {});
   }, []);
@@ -73,7 +73,7 @@ function AtlasContent() {
         if (newClaimId) {
           setSelectedClaimId(newClaimId);
         }
-        api.getClaims({ limit: 100 })
+        api.getClaims({ limit: 500 })
           .then((data) => setClaimsList(data))
           .catch(() => {});
         setTimeout(() => setShowUploadModal(false), 1200);
@@ -169,6 +169,8 @@ function AtlasContent() {
       <WebGISMap
         key={mapKey}
         selectedClaimId={selectedClaimId}
+        claims={claimsList}
+        showClaimMarkers
         onSelectClaim={(id) => setSelectedClaimId(id)}
         height="h-[calc(100dvh-var(--header-height))]"
       />

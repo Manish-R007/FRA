@@ -246,6 +246,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   background-color: #0f172a;
 }
 
+.fra-claim-marker {
+  width: 34px;
+  height: 42px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+.fra-claim-marker svg {
+  width: 34px;
+  height: 42px;
+  display: block;
+}
+.fra-claim-marker.is-selected {
+  transform: translateY(-2px) scale(1.18);
+  filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.65));
+  z-index: 2;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

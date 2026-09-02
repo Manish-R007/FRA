@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -66,7 +66,6 @@ export default function ClaimDetailPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "gis" | "satellite" | "segmentation" | "dss" | "audit">("overview");
   const [loading, setLoading] = useState(true);
   const [runningAnalysis, setRunningAnalysis] = useState(false);
-  const [selectedRaster, setSelectedRaster] = useState<"rgb" | "cir" | "ndvi" | "ndwi" | "ndbi">("ndvi");
 
   const loadData = async () => {
     try {
@@ -159,6 +158,51 @@ export default function ClaimDetailPage() {
       alert(err.message || "Status update failed");
     }
   };
+
+  // Build a GeoJSON FeatureCollection for the map from the individual claim geometry.
+  // Memoised so the WebGISMap data-loading effect does not re-fire on every render.
+  const claimGeometries = useMemo(() => {
+    if (!geometry || !claim) return undefined;
+    let parsedGeom = geometry.geometry;
+    if (typeof parsedGeom === "string") {
+      try {
+        parsedGeom = JSON.parse(parsedGeom);
+      } catch (e) {
+        console.error("Failed to parse geometry:", e);
+      }
+    }
+    if (parsedGeom?.type === "Feature") parsedGeom = parsedGeom.geometry;
+    if (parsedGeom?.type === "FeatureCollection") parsedGeom = parsedGeom.features?.[0]?.geometry;
+    return {
+      type: "FeatureCollection" as const,
+      features: [{
+        type: "Feature" as const,
+        geometry: parsedGeom,
+        properties: {
+          geometry_id: geometry.id,
+          claim_id: claim.claim_id,
+          db_claim_id: claim.id,
+          applicant_name: claim.applicant_name,
+          father_or_husband_name: claim.father_or_husband_name,
+          claim_type: claim.claim_type,
+          village: claim.village,
+          block: claim.block,
+          district: claim.district,
+          state: claim.state,
+          survey_number: claim.survey_number,
+          area_claimed_hectares: claim.area_claimed,
+          calculated_area_hectares: geometry.calculated_area_hectares,
+          calculated_area_m2: geometry.calculated_area_m2,
+          area_difference_percentage: geometry.area_difference_percentage,
+          flag_for_review: geometry.flag_for_review,
+          status: claim.status,
+          verification_status: claim.verification_status,
+          geometry_source: geometry.geometry_source,
+          bbox: geometry.bbox,
+        }
+      }]
+    };
+  }, [geometry, claim]);
 
   if (loading || !claim) {
     return (
@@ -417,7 +461,11 @@ export default function ClaimDetailPage() {
                 </div>
 
                 <div className="rounded-3xl border border-slate-800 overflow-hidden shadow-2xl h-[500px]">
-                  <WebGISMap selectedClaimId={claim.claim_id} height="h-[500px]" />
+                  <WebGISMap
+                    selectedClaimId={claim.claim_id}
+                    height="h-[500px]"
+                    initialGeometries={claimGeometries}
+                  />
                 </div>
               </>
             )}
@@ -541,58 +589,6 @@ export default function ClaimDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Raster Layer Selector & Viewer */}
-            <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm font-bold text-white">Copernicus Sentinel-2 Multispectral Raster Viewer</h3>
-                </div>
-
-                <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
-                  {[
-                    { id: "rgb", label: "True Color RGB (B4,B3,B2)" },
-                    { id: "cir", label: "Color Infrared (B8,B4,B3)" },
-                    { id: "ndvi", label: "NDVI (Vegetation)" },
-                    { id: "ndwi", label: "NDWI (Water)" },
-                    { id: "ndbi", label: "NDBI (Built-up)" },
-                  ].map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => setSelectedRaster(r.id as any)}
-                      className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all duration-150 ${
-                        selectedRaster === r.id
-                          ? "bg-emerald-600 text-white font-semibold shadow-sm"
-                          : "text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-slate-800"
-                      }`}
-                    >
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Imagery Display */}
-              <div className="relative w-full h-96 rounded-2xl overflow-hidden bg-slate-900 flex items-center justify-center border border-slate-800">
-                {analysis || sentinelStats ? (
-                  <img
-                    src={`/api/sentinel/image/${claim.claim_id}/${selectedRaster}`}
-                    alt="Copernicus Sentinel Raster"
-                    className="max-h-full object-contain rounded-xl shadow-2xl"
-                    onError={(e) => {
-                      // Fallback to legacy static route if needed
-                      (e.target as HTMLImageElement).src = `/api/analysis/imagery/claim_${claim.claim_id}_${selectedRaster}.png`;
-                    }}
-                  />
-                ) : (
-                  <div className="text-center text-slate-500 space-y-2">
-                    <Activity className="w-8 h-8 mx-auto text-slate-600" />
-                    <p>No satellite imagery rendered yet. Click &apos;Run Satellite Analysis&apos; above.</p>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         )}
 
