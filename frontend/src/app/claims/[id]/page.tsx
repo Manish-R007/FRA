@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -159,6 +159,51 @@ export default function ClaimDetailPage() {
       alert(err.message || "Status update failed");
     }
   };
+
+  // Build a GeoJSON FeatureCollection for the map from the individual claim geometry.
+  // Memoised so the WebGISMap data-loading effect does not re-fire on every render.
+  const claimGeometries = useMemo(() => {
+    if (!geometry || !claim) return undefined;
+    let parsedGeom = geometry.geometry;
+    if (typeof parsedGeom === "string") {
+      try {
+        parsedGeom = JSON.parse(parsedGeom);
+      } catch (e) {
+        console.error("Failed to parse geometry:", e);
+      }
+    }
+    if (parsedGeom?.type === "Feature") parsedGeom = parsedGeom.geometry;
+    if (parsedGeom?.type === "FeatureCollection") parsedGeom = parsedGeom.features?.[0]?.geometry;
+    return {
+      type: "FeatureCollection" as const,
+      features: [{
+        type: "Feature" as const,
+        geometry: parsedGeom,
+        properties: {
+          geometry_id: geometry.id,
+          claim_id: claim.claim_id,
+          db_claim_id: claim.id,
+          applicant_name: claim.applicant_name,
+          father_or_husband_name: claim.father_or_husband_name,
+          claim_type: claim.claim_type,
+          village: claim.village,
+          block: claim.block,
+          district: claim.district,
+          state: claim.state,
+          survey_number: claim.survey_number,
+          area_claimed_hectares: claim.area_claimed,
+          calculated_area_hectares: geometry.calculated_area_hectares,
+          calculated_area_m2: geometry.calculated_area_m2,
+          area_difference_percentage: geometry.area_difference_percentage,
+          flag_for_review: geometry.flag_for_review,
+          status: claim.status,
+          verification_status: claim.verification_status,
+          geometry_source: geometry.geometry_source,
+          bbox: geometry.bbox,
+        }
+      }]
+    };
+  }, [geometry, claim]);
 
   if (loading || !claim) {
     return (
@@ -417,7 +462,11 @@ export default function ClaimDetailPage() {
                 </div>
 
                 <div className="rounded-3xl border border-slate-800 overflow-hidden shadow-2xl h-[500px]">
-                  <WebGISMap selectedClaimId={claim.claim_id} height="h-[500px]" />
+                  <WebGISMap
+                    selectedClaimId={claim.claim_id}
+                    height="h-[500px]"
+                    initialGeometries={claimGeometries}
+                  />
                 </div>
               </>
             )}

@@ -2,11 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
-import { type Map as MapLibreMap } from "maplibre-gl";
+import { setWorkerUrl, type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+if (typeof window !== "undefined") {
+  // Next.js does not emit MapLibre's worker + shared sibling, so GeoJSON
+  // polygons never tessellate while raster tiles still appear.
+  setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+}
 import { AlertTriangle, Layers, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { formatArea, getStatusBadgeColor } from "@/lib/utils";
+import { api } from "@/lib/api";
 
 interface WebGISMapProps {
   initialGeometries?: any;
@@ -22,8 +29,41 @@ type BoundaryFilter = "ALL" | "IFR" | "CR" | "CFR" | "FLAGGED";
 
 const EMPTY_COLLECTION: any = { type: "FeatureCollection", features: [] };
 
+function unwrapGeometry(geom: any): any {
+  if (!geom) return geom;
+  if (typeof geom === "string") {
+    try { geom = JSON.parse(geom); } catch { return geom; }
+  }
+  if (geom.type === "Feature") return unwrapGeometry(geom.geometry);
+  if (geom.type === "FeatureCollection") return unwrapGeometry(geom.features?.[0]?.geometry);
+  if (geom.type === "GeometryCollection") {
+    const polys = (geom.geometries || []).filter((item: any) => item?.type === "Polygon" || item?.type === "MultiPolygon");
+    if (polys.length === 1) return unwrapGeometry(polys[0]);
+    if (polys.length > 1) {
+      return {
+        type: "MultiPolygon",
+        coordinates: polys.flatMap((item: any) => item.type === "Polygon" ? [item.coordinates] : item.coordinates || []),
+      };
+    }
+  }
+  return geom;
+}
+
+function asFeatureCollection(data: any): any {
+  const features = (data?.features || []).map((feature: any) => ({
+    ...feature,
+    type: "Feature",
+    geometry: unwrapGeometry(feature?.geometry),
+    properties: feature?.properties || {},
+  })).filter((feature: any) => feature.geometry?.type && feature.geometry?.coordinates);
+  return { type: "FeatureCollection", features };
+}
+
 function featureBounds(feature: any): [[number, number], [number, number]] | null {
-  const bbox = feature?.properties?.bbox;
+  let bbox = feature?.properties?.bbox;
+  if (typeof bbox === "string") {
+    try { bbox = JSON.parse(bbox); } catch {}
+  }
   if (Array.isArray(bbox) && bbox.length === 4) return [[bbox[0], bbox[1]], [bbox[2], bbox[3]]];
   const coordinates: number[][] = [];
   const walk = (item: any) => {
@@ -31,7 +71,7 @@ function featureBounds(feature: any): [[number, number], [number, number]] | nul
     if (typeof item[0] === "number" && typeof item[1] === "number") coordinates.push(item);
     else item.forEach(walk);
   };
-  walk(feature?.geometry?.coordinates);
+  walk(unwrapGeometry(feature?.geometry)?.coordinates);
   if (!coordinates.length) return null;
   return coordinates.reduce(
     (bounds, [lng, lat]) => [[Math.min(bounds[0][0], lng), Math.min(bounds[0][1], lat)], [Math.max(bounds[1][0], lng), Math.max(bounds[1][1], lat)]],
@@ -57,13 +97,11 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
 
   useEffect(() => {
     if (initialGeometries) { setGeometries(initialGeometries); return; }
-    fetch("/api/geometries", { cache: "no-store" })
-      .then((res) => {
-        if (!res.ok) throw new Error("Unable to load parcel boundaries");
-        return res.json();
-      })
-      .then(setGeometries)
-      .catch(() => setGeometries(EMPTY_COLLECTION));
+    let cancelled = false;
+    api.getGeometries()
+      .then((data) => { if (!cancelled) setGeometries(data); })
+      .catch(() => { if (!cancelled) setGeometries(EMPTY_COLLECTION); });
+    return () => { cancelled = true; };
   }, [initialGeometries]);
 
   const selectFeature = useCallback((feature: any, fly = true) => {
@@ -71,11 +109,25 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
     setSelectedFeature(feature.properties);
     onSelectClaimRef.current?.(feature.properties?.claim_id);
     const bounds = featureBounds(feature);
-    if (fly && bounds && mapRef.current) mapRef.current.fitBounds(bounds, { padding: 70, maxZoom: 16, duration: 900 });
+    if (fly && bounds && mapRef.current) {
+      mapRef.current.fitBounds(bounds, { padding: 80, maxZoom: 17, duration: 400 });
+    }
   }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    
+    // Compute initial center if initialGeometries are provided
+    let initialCenter: [number, number] = [86.74512, 21.93245];
+    let initialZoom = 12;
+    if (initialGeometries?.features?.[0]) {
+      const bounds = featureBounds(initialGeometries.features[0]);
+      if (bounds) {
+        initialCenter = [(bounds[0][0] + bounds[1][0]) / 2, (bounds[0][1] + bounds[1][1]) / 2];
+        initialZoom = 15;
+      }
+    }
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: {
@@ -87,7 +139,8 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
           { id: "sentinel-basemap", type: "raster", source: "sentinel-basemap" },
         ],
       },
-      center: [86.74512, 21.93245], zoom: 12,
+      center: initialCenter,
+      zoom: initialZoom,
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
@@ -95,31 +148,50 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
       if (mapRef.current !== map) return;
       map.addSource("fra-parcels", { type: "geojson", data: EMPTY_COLLECTION });
       map.addSource("fra-selected-parcel", { type: "geojson", data: EMPTY_COLLECTION });
-      // The fill layer remains solely as a transparent interaction target;
-      // it never masks the satellite basemap or the uploaded boundary.
+      // Fill layer with subtle red tint for selected parcel
+      map.addLayer({
+        id: "fra-selected-parcel-fill",
+        type: "fill",
+        source: "fra-selected-parcel",
+        paint: {
+          "fill-color": "#ff0000",
+          "fill-opacity": 0.15,
+        },
+      });
+      // Transparent fill layer for all parcels (click target)
       map.addLayer({
         id: "fra-parcels-fill",
         type: "fill",
         source: "fra-parcels",
-        paint: { "fill-color": "#000000", "fill-opacity": 0 },
+        paint: { "fill-color": "#ff0000", "fill-opacity": 0.18 },
       });
+      // White contrast halo around selected parcel boundary for visibility over dark/green terrain
+      map.addLayer({
+        id: "fra-selected-parcel-halo",
+        type: "line",
+        source: "fra-selected-parcel",
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#ffffff", "line-width": 8, "line-opacity": 0.9 },
+      });
+      // General parcel red boundary line
       map.addLayer({
         id: "fra-parcels-line",
         type: "line",
         source: "fra-parcels",
+        layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "line-color": ["case", ["boolean", ["get", "flag_for_review"], false], "#ef4444", ["match", ["get", "claim_type"], "CR", "#facc15", "CFR", "#a78bfa", "#10b981"]],
-          "line-width": 3,
+          "line-color": "#ff0000",
+          "line-width": 4,
           "line-opacity": 1,
         },
       });
-      // The currently opened claim is always distinguished by a clear red
-      // outline, while its polygon interior stays transparent.
+      // Highlighted selected claim parcel red boundary line
       map.addLayer({
         id: "fra-selected-parcel-line",
         type: "line",
         source: "fra-selected-parcel",
-        paint: { "line-color": "#ff0000", "line-width": 6, "line-opacity": 1 },
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: { "line-color": "#ff0000", "line-width": 5, "line-opacity": 1 },
       });
       map.on("click", "fra-parcels-fill", (event: any) => {
         const feature = event.features?.[0];
@@ -127,6 +199,7 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
       });
       map.on("mouseenter", "fra-parcels-fill", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "fra-parcels-fill", () => { map.getCanvas().style.cursor = ""; });
+      map.resize();
       setMapReady(true);
     });
     return () => {
@@ -141,7 +214,7 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
     const filtered = (geometries?.features || []).filter((feature: any) => activeLayer === "ALL" || (activeLayer === "FLAGGED" ? feature.properties?.flag_for_review : feature.properties?.claim_type === activeLayer));
     const parcelSource = map.getSource("fra-parcels") as maplibregl.GeoJSONSource | undefined;
     if (!parcelSource) return;
-    parcelSource.setData({ ...EMPTY_COLLECTION, features: filtered } as any);
+    parcelSource.setData(asFeatureCollection({ ...EMPTY_COLLECTION, features: filtered }));
     const normalizedSelectedId = String(selectedClaimId || "").trim().toLowerCase();
     const selected = (geometries?.features || []).find((feature: any) => String(feature.properties?.claim_id || "").trim().toLowerCase() === normalizedSelectedId || String(feature.properties?.db_claim_id) === String(selectedClaimId));
     if (selected) selectFeature(selected, true);
@@ -165,7 +238,7 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
         || (selectedDbId !== "" && featureDbId === selectedDbId);
     });
     selectedSource.setData(selected
-      ? { type: "FeatureCollection", features: [selected] }
+      ? asFeatureCollection({ type: "FeatureCollection", features: [selected] })
       : EMPTY_COLLECTION);
   }, [geometries, mapReady, selectedClaimId, selectedFeature]);
 

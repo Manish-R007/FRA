@@ -53,6 +53,15 @@ def get_all_geometries(
     for geom, claim in results:
         try:
             geometry_obj = json.loads(geom.geometry)
+            if isinstance(geometry_obj, str):
+                geometry_obj = json.loads(geometry_obj)
+            if isinstance(geometry_obj, dict) and geometry_obj.get("type") == "Feature":
+                geometry_obj = geometry_obj.get("geometry")
+            elif isinstance(geometry_obj, dict) and geometry_obj.get("type") == "FeatureCollection":
+                feats = geometry_obj.get("features") or []
+                geometry_obj = feats[0].get("geometry") if feats else None
+            if not geometry_obj:
+                continue
         except Exception:
             continue
 

@@ -48,6 +48,13 @@ def validate_and_process_geometry(
     Validates polygon geometry, checks for invalid topology, computes real geodesic area,
     computes area discrepancy against claimed Patta area, and flags for review if discrepancy > 5%.
     """
+    # Unwrap Feature / FeatureCollection so uploaded survey files always yield a raw geometry
+    if geojson_geom.get("type") == "Feature":
+        geojson_geom = geojson_geom.get("geometry") or {}
+    elif geojson_geom.get("type") == "FeatureCollection":
+        feats = geojson_geom.get("features") or []
+        geojson_geom = (feats[0].get("geometry") if feats else {}) or {}
+
     if "type" not in geojson_geom or "coordinates" not in geojson_geom:
         raise ValueError("Invalid GeoJSON geometry: Missing type or coordinates")
     
@@ -159,8 +166,11 @@ def parse_geospatial_features(content: str, filename: str = "") -> List[Dict[str
         features = []
         for f in data.get("features", []):
             if f.get("geometry"):
+                geom = f.get("geometry")
+                if isinstance(geom, dict) and geom.get("type") == "Feature":
+                    geom = geom.get("geometry")
                 features.append({
-                    "geometry": f.get("geometry"),
+                    "geometry": geom,
                     "properties": f.get("properties", {})
                 })
         if not features:
