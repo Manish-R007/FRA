@@ -566,9 +566,6 @@ video {
 .pointer-events-none {
   pointer-events: none;
 }
-.static {
-  position: static;
-}
 .fixed {
   position: fixed;
 }
@@ -818,9 +815,6 @@ video {
 }
 .max-h-\[calc\(100vh-100px\)\] {
   max-height: calc(100vh - 100px);
-}
-.max-h-full {
-  max-height: 100%;
 }
 .min-h-\[calc\(100vh-var\(--header-height\)\)\] {
   min-height: calc(100vh - var(--header-height));
@@ -1553,10 +1547,6 @@ video {
 .bg-clip-text {
   -webkit-background-clip: text;
           background-clip: text;
-}
-.object-contain {
-  -o-object-fit: contain;
-     object-fit: contain;
 }
 .object-cover {
   -o-object-fit: cover;
@@ -2382,6 +2372,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   height: 100%;
   z-index: 1;
   background-color: #0f172a;
+}
+
+.fra-claim-marker {
+  width: 34px;
+  height: 42px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+.fra-claim-marker svg {
+  width: 34px;
+  height: 42px;
+  display: block;
+}
+.fra-claim-marker.is-selected {
+  transform: translateY(-2px) scale(1.18);
+  filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.65));
+  z-index: 2;
 }
 
 /* Custom Scrollbar */
