@@ -41,6 +41,10 @@ def test_sentinel_hub_pixel_dimensions():
     assert 128 <= h <= 1024
 
 
+@pytest.mark.skipif(
+    not sentinel_hub_client.has_credentials(),
+    reason="Live Sentinel-2 credentials are required for integration tests"
+)
 def test_sentinel_hub_process_and_compute_parcel():
     """Validates full Sentinel-2 spectral indices, statistics, and raster generation."""
     res = sentinel_hub_client.process_and_compute_parcel(
@@ -136,6 +140,10 @@ def _ensure_test_claim() -> int:
     finally:
         db.close()
 
+@pytest.mark.skipif(
+    not sentinel_hub_client.has_credentials(),
+    reason="Live Sentinel-2 credentials are required for integration tests"
+)
 def test_sentinel_api_statistics_endpoint():
     """Tests GET /api/sentinel/statistics/{parcel_id} with test claim."""
     claim_id = _ensure_test_claim()
@@ -151,6 +159,10 @@ def test_sentinel_api_statistics_endpoint():
     assert data["metadata"]["cloud_masking_applied"] is True
 
 
+@pytest.mark.skipif(
+    not sentinel_hub_client.has_credentials(),
+    reason="Live Sentinel-2 credentials are required for integration tests"
+)
 def test_sentinel_api_layer_endpoints():
     """Tests True Color, CIR, NDVI, NDWI, NDBI endpoints."""
     claim_id = _ensure_test_claim()
@@ -199,3 +211,22 @@ def test_sentinel_api_error_handling():
     # 2. Invalid layer image
     resp_bad_layer = client.get(f"/api/sentinel/image/{claim_id}/unknown_layer")
     assert resp_bad_layer.status_code == 400
+
+
+def test_sentinel_live_data_unavailable_error(monkeypatch):
+    """Verifies that when real-time Sentinel-2 analysis cannot be retrieved, it returns 503 with 'problem in fetching real time' error."""
+    claim_id = _ensure_test_claim()
+
+    def mock_process_fail(*args, **kwargs):
+        from app.services.sentinel_hub_service import LiveSentinelDataUnavailable
+        raise LiveSentinelDataUnavailable("Problem in fetching real-time Sentinel-2 data: Authentication failed with Copernicus Data Space Ecosystem.")
+
+    monkeypatch.setattr(sentinel_hub_client, "process_and_compute_parcel", mock_process_fail)
+
+    resp = client.get(f"/api/sentinel/statistics/{claim_id}")
+    assert resp.status_code == 503
+    data = resp.json()
+    assert "error" in data
+    assert "problem in fetching real time" in data["error"].lower()
+    assert "problem in fetching real-time" in data["detail"].lower()
+

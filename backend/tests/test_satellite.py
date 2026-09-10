@@ -1,5 +1,13 @@
 from app.services.satellite_service import process_satellite_analysis
 from app.services.segmentation_service import perform_semantic_segmentation, extract_detected_assets
+from app.services.sentinel_hub_service import sentinel_hub_client
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    not sentinel_hub_client.has_credentials(),
+    reason="Live Sentinel-2 credentials are required for integration tests"
+)
 
 def test_satellite_and_indices_pipeline():
     sample_poly = {

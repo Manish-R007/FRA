@@ -20,9 +20,9 @@ class SatelliteAnalysis(Base):
     mean_ndwi = Column(Float, nullable=True)
     mean_ndbi = Column(Float, nullable=True)
     processing_status = Column(String(50), default="COMPLETED")  # PENDING, PROCESSING, COMPLETED, FAILED
-    model_name = Column(String(100), default="SegFormer-B2-RemoteSensing")
-    model_version = Column(String(50), default="v2.1.0")
-    confidence = Column(Float, default=0.89)
+    model_name = Column(String(100), nullable=True)
+    model_version = Column(String(50), nullable=True)
+    confidence = Column(Float, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -36,7 +36,7 @@ class LandCoverStatistic(Base):
     area_m2 = Column(Float, nullable=False)
     area_hectares = Column(Float, nullable=False)
     percentage = Column(Float, nullable=False)  # Percentage of total valid area
-    confidence = Column(Float, default=0.90)
+    confidence = Column(Float, nullable=True)
 
 
 class Asset(Base):
@@ -48,6 +48,6 @@ class Asset(Base):
     asset_type = Column(String(50), nullable=False)  # forest, crop, pond, water_body, building, homestead, road, farm
     geometry = Column(Text, nullable=False)  # GeoJSON polygon/point/linestring
     area_m2 = Column(Float, nullable=True)
-    confidence = Column(Float, default=0.85)
-    model_name = Column(String(100), default="SAM-v2+SegFormer")
+    confidence = Column(Float, nullable=True)
+    model_name = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

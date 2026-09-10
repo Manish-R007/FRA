@@ -32,17 +32,17 @@ class RAGCitation(BaseModel):
     similarity_score: float
 
 class SatelliteTelemetry(BaseModel):
-    crop_pct: float = 0.0
-    forest_pct: float = 0.0
-    water_pct: float = 0.0
-    building_pct: float = 0.0
-    bare_pct: float = 0.0
+    crop_pct: Optional[float] = None
+    forest_pct: Optional[float] = None
+    water_pct: Optional[float] = None
+    building_pct: Optional[float] = None
+    bare_pct: Optional[float] = None
     mean_ndvi: Optional[float] = None
     mean_ndwi: Optional[float] = None
-    assets_detected: List[str] = []
+    assets_detected: Optional[List[str]] = None
     parcel_area_ha: Optional[float] = None
     claim_type: Optional[str] = None
-    water_deficit: bool = False
+    water_deficit: Optional[bool] = None
 
 class DSSQueryResponse(BaseModel):
     query: str

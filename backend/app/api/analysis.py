@@ -65,14 +65,15 @@ def run_satellite_analysis(
             mean_ndwi=sat_res["mean_ndwi"],
             mean_ndbi=sat_res["mean_ndbi"],
             processing_status="COMPLETED",
-            model_name="SegFormer-B2-RemoteSensing",
-            model_version="v2.1.0",
-            confidence=0.91
+            model_name=None,
+            model_version=None,
+            confidence=None
         )
         db.add(sat_analysis)
         db.commit()
         db.refresh(sat_analysis)
     else:
+        sat_analysis.geometry_id = geom_rec.id
         sat_analysis.acquisition_date = sat_res["acquisition_date"]
         sat_analysis.cloud_percentage = sat_res["cloud_percentage"]
         sat_analysis.image_url = sat_res["raster_urls"]["rgb_url"]
@@ -84,6 +85,9 @@ def run_satellite_analysis(
         sat_analysis.mean_ndwi = sat_res["mean_ndwi"]
         sat_analysis.mean_ndbi = sat_res["mean_ndbi"]
         sat_analysis.processing_status = "COMPLETED"
+        sat_analysis.model_name = None
+        sat_analysis.model_version = None
+        sat_analysis.confidence = None
         db.commit()
         db.refresh(sat_analysis)
 
@@ -107,7 +111,7 @@ def run_satellite_analysis(
             area_m2=st["area_m2"],
             area_hectares=st["area_hectares"],
             percentage=st["percentage"],
-            confidence=st["confidence"]
+            confidence=st.get("confidence")
         )
         db.add(stat_rec)
         stat_responses.append(LandCoverStatsResponse(**st))
@@ -120,7 +124,8 @@ def run_satellite_analysis(
     detected_assets = extract_detected_assets(
         geojson_geom=geojson_geom,
         seg_mask=seg_mask,
-        statistics=stats_list
+        statistics=stats_list,
+        pixel_area_m2=sat_res.get("pixel_area_m2")
     )
 
     asset_responses = []
@@ -131,8 +136,8 @@ def run_satellite_analysis(
             asset_type=ast["asset_type"],
             geometry=json.dumps(ast["geometry"]),
             area_m2=ast.get("area_m2"),
-            confidence=ast.get("confidence", 0.88),
-            model_name=ast.get("model_name", "SAM2-Detector")
+            confidence=ast.get("confidence"),
+            model_name=ast.get("model_name")
         )
         db.add(asset_rec)
         db.commit()
@@ -209,7 +214,7 @@ def get_analysis_by_claim(claim_id_or_id: str, db: Session = Depends(get_db), cu
         for s in stats
     ]
 
-    assets = db.query(Asset).filter(Asset.claim_id == claim.id).all()
+    assets = db.query(Asset).filter(Asset.analysis_id == sat.id).all()
     asset_responses = [
         AssetResponse(
             id=a.id,
@@ -286,7 +291,7 @@ def get_claim_assets(claim_id_or_id: str, db: Session = Depends(get_db), current
     if not claim:
         raise HTTPException(status_code=404, detail="FRA Claim not found")
 
-    assets = db.query(Asset).filter(Asset.claim_id == claim.id).all()
+    assets = db.query(Asset).filter(Asset.analysis_id == sat.id).all()
     return [
         AssetResponse(
             id=a.id,

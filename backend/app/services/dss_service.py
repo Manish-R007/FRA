@@ -340,7 +340,7 @@ def run_dss_for_claim(db: Session, claim_id: int) -> List[SchemeRecommendationRe
     stats_dict = {s.class_name: s.percentage for s in stats}
 
     # Fetch assets
-    assets = db.query(Asset).filter(Asset.claim_id == claim_id).all()
+    assets = db.query(Asset).filter(Asset.analysis_id == analysis.id).all()
     has_water_asset = any(a.asset_type in ["pond", "water_body"] for a in assets)
     has_farm_asset = any(a.asset_type in ["farm", "crop"] for a in assets)
 
@@ -521,10 +521,22 @@ def answer_dss_query(db: Session, query_req: DSSQueryRequest) -> DSSQueryRespons
         
         # Pull latest satellite stats and assets
         analysis = db.query(SatelliteAnalysis).filter(SatelliteAnalysis.claim_id == claim.id).order_by(SatelliteAnalysis.id.desc()).first()
+        if not analysis or analysis.processing_status != "COMPLETED":
+            return DSSChatResponse(
+                message=ChatMessage(
+                    role="assistant",
+                    content="Live Sentinel-2 analysis is unavailable for this claim. No satellite values or asset detections are available.",
+                    model_used=None
+                ),
+                context_type="BENEFICIARY_ASSESSMENT",
+                claim_context={"id": claim.id, "claim_id": claim.claim_id},
+                recommendations=[],
+                citations=citations,
+                suggested_followups=[]
+            )
         stats_dict = {}
-        if analysis:
-            stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
-            stats_dict = {s.class_name: s.percentage for s in stats}
+        stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
+        stats_dict = {s.class_name: s.percentage for s in stats}
             
         crop_pct = stats_dict.get("crop", 0.0)
         forest_pct = stats_dict.get("forest", 0.0)
@@ -532,8 +544,8 @@ def answer_dss_query(db: Session, query_req: DSSQueryRequest) -> DSSQueryRespons
         bldg_pct = stats_dict.get("building", 0.0)
         bare_pct = stats_dict.get("bare_land", 0.0)
 
-        assets = db.query(Asset).filter(Asset.claim_id == claim.id).all()
-        assets_desc = ", ".join(f"{a.asset_type} ({a.confidence * 100:.0f}% conf)" for a in assets) if assets else "None detected"
+        assets = db.query(Asset).filter(Asset.analysis_id == analysis.id).all() if analysis else []
+        assets_desc = ", ".join(a.asset_type for a in assets) if assets else "None detected"
 
         is_approved = (claim.status == "APPROVED" or claim.verification_status == "VERIFIED")
         eligible_schemes = [r for r in recs if r.eligibility_status == "ELIGIBLE"]
@@ -811,11 +823,22 @@ def chat_dss_query(db: Session, req: DSSChatRequest) -> DSSChatResponse:
         recommendations_list = recs
 
         # Fetch latest satellite analysis and land cover stats
-        analysis = db.query(SatelliteAnalysis).filter(SatelliteAnalysis.claim_id == claim.id).order_by(SatelliteAnalysis.id.desc()).first()
+        analysis = db.query(SatelliteAnalysis).filter(
+            SatelliteAnalysis.claim_id == claim.id,
+            SatelliteAnalysis.processing_status == "COMPLETED"
+        ).order_by(SatelliteAnalysis.id.desc()).first()
+        if not analysis:
+            return DSSQueryResponse(
+                query=query_req.query,
+                answer="Live Sentinel-2 analysis is unavailable for this claim. No satellite values or asset detections are available.",
+                context_type="BENEFICIARY_ASSESSMENT",
+                recommendations=[],
+                citations=citations,
+                statistics=None
+            )
         stats_dict = {}
-        if analysis:
-            stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
-            stats_dict = {s.class_name: s.percentage for s in stats}
+        stats = db.query(LandCoverStatistic).filter(LandCoverStatistic.analysis_id == analysis.id).all()
+        stats_dict = {s.class_name: s.percentage for s in stats}
 
         crop_pct = stats_dict.get("crop", 0.0)
         forest_pct = stats_dict.get("forest", 0.0)
@@ -824,8 +847,8 @@ def chat_dss_query(db: Session, req: DSSChatRequest) -> DSSChatResponse:
         bare_pct = stats_dict.get("bare_land", 0.0)
         grass_pct = stats_dict.get("grassland", 0.0)
 
-        assets = db.query(Asset).filter(Asset.claim_id == claim.id).all()
-        assets_list = [f"{a.asset_type.upper()} ({a.confidence * 100:.0f}% confidence)" for a in assets] if assets else ["No permanent structures or water bodies detected"]
+        assets = db.query(Asset).filter(Asset.analysis_id == analysis.id).all() if analysis else []
+        assets_list = [a.asset_type.upper() for a in assets] if assets else ["No permanent structures or water bodies detected"]
         water_deficit = (crop_pct > 15.0 and water_pct < 4.0)
 
         satellite_telemetry = SatelliteTelemetry(
@@ -834,8 +857,8 @@ def chat_dss_query(db: Session, req: DSSChatRequest) -> DSSChatResponse:
             water_pct=round(water_pct, 1),
             building_pct=round(bldg_pct, 1),
             bare_pct=round(bare_pct, 1),
-            mean_ndvi=round(analysis.mean_ndvi, 3) if analysis and analysis.mean_ndvi else (0.55 if crop_pct > 20 else 0.35),
-            mean_ndwi=round(analysis.mean_ndwi, 3) if analysis and analysis.mean_ndwi else (-0.15 if water_deficit else 0.10),
+            mean_ndvi=round(analysis.mean_ndvi, 3) if analysis and analysis.mean_ndvi is not None else None,
+            mean_ndwi=round(analysis.mean_ndwi, 3) if analysis and analysis.mean_ndwi is not None else None,
             assets_detected=assets_list,
             parcel_area_ha=claim.area_claimed,
             claim_type=claim.claim_type,

@@ -386,9 +386,12 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
     });
 
     if (!selectedClaimId && !selectedFeature && positions.length) {
-      const bounds = positions.reduce(
-        (acc, [lng, lat]) => [[Math.min(acc[0][0], lng), Math.min(acc[0][1], lat)], [Math.max(acc[1][0], lng), Math.max(acc[1][1], lat)]],
-        [[positions[0][0], positions[0][1]], [positions[0][0], positions[0][1]]] as [[number, number], [number, number]],
+      const bounds: [maplibregl.LngLatLike, maplibregl.LngLatLike] = positions.reduce<[[number, number], [number, number]]>(
+        (acc, [lng, lat]) => [
+          [Math.min(acc[0][0], lng), Math.min(acc[0][1], lat)],
+          [Math.max(acc[1][0], lng), Math.max(acc[1][1], lat)]
+        ],
+        [[positions[0][0], positions[0][1]], [positions[0][0], positions[0][1]]]
       );
       map.fitBounds(bounds, { padding: 90, maxZoom: positions.length === 1 ? 12 : 8, duration: 0 });
     }

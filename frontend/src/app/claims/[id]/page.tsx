@@ -29,7 +29,9 @@ import {
   Bot,
   MessageSquare,
   Zap,
-  Upload
+  Upload,
+  AlertCircle,
+  Image as ImageIcon
 } from "lucide-react";
 import { 
   PieChart, 
@@ -52,6 +54,44 @@ import { getStatusBadgeColor, getPriorityBadgeColor, formatArea } from "@/lib/ut
 
 const LAND_USE_COLORS = ["#15803d", "#84cc16", "#0284c7", "#dc2626", "#d97706", "#10b981", "#64748b", "#94a3b8"];
 
+const SATELLITE_LAYERS = [
+  {
+    id: "rgb",
+    name: "True Color RGB",
+    badge: "Optical",
+    bands: "B04 (Red), B03 (Green), B02 (Blue)",
+    desc: "Natural-color optical surface reflectance photograph of the claimant's parcel at 10m ground resolution. Shows real ground conditions, canopy distribution, and actual crop plots.",
+  },
+  {
+    id: "cir",
+    name: "Color Infrared (CIR)",
+    badge: "Biomass",
+    bands: "B08 (NIR), B04 (Red), B03 (Green)",
+    desc: "False-color infrared composite. Actively photosynthesizing vegetation reflects intensely in NIR and appears in bright red, distinguishing living crop/forest from soil.",
+  },
+  {
+    id: "ndvi",
+    name: "NDVI Vegetation Map",
+    badge: "Index",
+    bands: "(B08 - B04) / (B08 + B04)",
+    desc: "Normalized Difference Vegetation Index colorized from red (bare/sparse) to deep emerald green (dense healthy canopy). Directly utilized for government scheme qualification.",
+  },
+  {
+    id: "ndwi",
+    name: "NDWI Moisture Map",
+    badge: "Water",
+    bands: "(B03 - B08) / (B03 + B08)",
+    desc: "Normalized Difference Water Index. Identifies water bodies, farm ponds, streams, and soil saturation levels in cyan and deep blue.",
+  },
+  {
+    id: "ndbi",
+    name: "NDBI Built-up Map",
+    badge: "Settlement",
+    bands: "(B11 - B08) / (B11 + B08)",
+    desc: "Normalized Difference Built-up Index. Employs 20m Shortwave-Infrared (SWIR-1) to delineate built-up homesteads, human settlements, and bare rock/soil surfaces.",
+  },
+] as const;
+
 export default function ClaimDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -61,6 +101,9 @@ export default function ClaimDetailPage() {
   const [geometry, setGeometry] = useState<FRAGeometry | null>(null);
   const [analysis, setAnalysis] = useState<SatelliteAnalysis | null>(null);
   const [sentinelStats, setSentinelStats] = useState<SentinelStatisticsResponse | null>(null);
+  const [sentinelError, setSentinelError] = useState<string | null>(null);
+  const [selectedSatelliteLayer, setSelectedSatelliteLayer] = useState<"rgb" | "cir" | "ndvi" | "ndwi" | "ndbi">("rgb");
+  const [imageVersion, setImageVersion] = useState<number>(Date.now());
   const [recommendations, setRecommendations] = useState<SchemeRecommendation[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "gis" | "satellite" | "segmentation" | "dss" | "audit">("overview");
@@ -70,6 +113,7 @@ export default function ClaimDetailPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setImageVersion(Date.now());
       const c = await api.getClaim(claimIdParam);
       setClaim(c);
 
@@ -86,7 +130,10 @@ export default function ClaimDetailPage() {
       try {
         const sStats = await api.getSentinelStatistics(c.id);
         setSentinelStats(sStats);
-      } catch {}
+        setSentinelError(null);
+      } catch (err: any) {
+        setSentinelError(err.message || "Problem in fetching real-time Sentinel-2 data");
+      }
 
       try {
         const r = await api.getClaimRecommendations(c.id);
@@ -136,14 +183,23 @@ export default function ClaimDetailPage() {
       return;
     }
     setRunningAnalysis(true);
+    setSentinelError(null);
     try {
       const res = await api.runAnalysis(claim.id);
       setAnalysis(res);
+      setImageVersion(Date.now());
+      try {
+        const sStats = await api.getSentinelStatistics(claim.id);
+        setSentinelStats(sStats);
+      } catch {}
       const recs = await api.getClaimRecommendations(claim.id);
       setRecommendations(recs);
       setActiveTab("satellite");
     } catch (err: any) {
-      alert(err.message || "Failed to execute satellite analysis");
+      const msg = err.message || "Problem in fetching real-time Sentinel-2 data";
+      setSentinelError(msg);
+      setActiveTab("satellite");
+      alert(msg);
     } finally {
       setRunningAnalysis(false);
     }
@@ -475,6 +531,24 @@ export default function ClaimDetailPage() {
         {/* TAB 3: SENTINEL-2 SPECTRAL INDICES */}
         {activeTab === "satellite" && (
           <div className="space-y-6">
+            {/* Real-time Fetch Error Banner */}
+            {sentinelError && (
+              <div className="p-4 rounded-3xl bg-rose-950/40 border border-rose-800/80 text-rose-200 text-xs flex items-start gap-3 shadow-xl">
+                <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <strong className="font-semibold block text-sm text-rose-300">
+                    Problem in fetching real-time Sentinel-2 data
+                  </strong>
+                  <p className="text-rose-300/80 text-[11px] leading-relaxed">
+                    {sentinelError}
+                  </p>
+                  <p className="text-rose-400/90 text-[10px] font-mono">
+                    Zero hardcoded or synthetic values permitted. Live observation required from Copernicus Data Space Ecosystem.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* AI Remote Sensing Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/70 p-4 rounded-3xl border border-slate-800">
               <div className="flex items-center gap-3">
@@ -497,98 +571,170 @@ export default function ClaimDetailPage() {
               </Link>
             </div>
 
-            {/* Spectral Indices Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-slate-500 block">Satellite Source</span>
-                <strong className="text-slate-200 font-mono text-xs block truncate">
-                  {sentinelStats?.metadata?.satellite_source || analysis?.satellite_source || "Copernicus Sentinel-2 L2A"}
-                </strong>
-                <span className="text-[10px] text-slate-500 block">
-                  Acquired: {sentinelStats?.metadata?.acquisition_date || analysis?.acquisition_date || "Pending Analysis"}
-                </span>
+            {/* Live Rendered Sentinel-2 Satellite Image of Claimant's Land */}
+            <div className="glass-panel p-6 rounded-3xl border border-slate-800 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
+                      LIVE RASTER OUTPUT
+                    </span>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-teal-400" />
+                      Exact Copernicus Sentinel-2 Satellite Image of Claimant&apos;s Land
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Clipped strictly to surveyed boundary coordinates for Claim {claim.claim_id} ({claim.applicant_name}) • No hardcoded or synthetic data
+                  </p>
+                </div>
+
+                {/* Layer Selector Tabs */}
+                <div className="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 overflow-x-auto">
+                  {SATELLITE_LAYERS.map((layer) => (
+                    <button
+                      key={layer.id}
+                      onClick={() => setSelectedSatelliteLayer(layer.id as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                        selectedSatelliteLayer === layer.id
+                          ? "bg-teal-500 text-slate-950 shadow-md font-bold"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      }`}
+                    >
+                      <span>{layer.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-slate-500 block">Mean NDVI (Vegetation)</span>
-                <strong className="text-lg font-bold text-emerald-400 font-mono">
-                  {(sentinelStats?.ndvi?.mean ?? analysis?.mean_ndvi) !== undefined && (sentinelStats?.ndvi?.mean ?? analysis?.mean_ndvi) !== null
-                    ? Number(sentinelStats?.ndvi?.mean ?? analysis?.mean_ndvi).toFixed(3)
-                    : "Awaiting Analysis"}
-                </strong>
-                <span className="text-[10px] text-emerald-500 block">
-                  {sentinelStats?.ndvi ? `Range: [${sentinelStats.ndvi.min}, ${sentinelStats.ndvi.max}] • σ: ${sentinelStats.ndvi.std_dev}` : "Vegetation Index"}
-                </span>
+              {/* Main Image Display & Information Card */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                {/* Image Render Canvas with transparency checkerboard background */}
+                <div className="lg:col-span-7 bg-slate-950/80 rounded-3xl p-4 border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden group">
+                  <div className="relative w-full aspect-square max-w-[460px] rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl flex items-center justify-center bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px]">
+                    <img
+                      key={`${selectedSatelliteLayer}-${imageVersion}`}
+                      src={`/api/sentinel/image/${claim.claim_id}/${selectedSatelliteLayer}?t=${imageVersion}`}
+                      alt={`Sentinel-2 ${selectedSatelliteLayer} for claim ${claim.claim_id}`}
+                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (!target.src.includes("/api/analysis/imagery/")) {
+                          target.src = `/api/analysis/imagery/claim_${claim.claim_id}_${selectedSatelliteLayer}.png?t=${imageVersion}`;
+                        }
+                      }}
+                    />
+
+                    {/* Overlay badge with active layer */}
+                    <div className="absolute top-3 left-3 px-2.5 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700 text-[10px] font-mono text-slate-200 flex items-center gap-1.5 shadow-lg">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{SATELLITE_LAYERS.find((l) => l.id === selectedSatelliteLayer)?.name}</span>
+                    </div>
+
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                      <a
+                        href={`/api/sentinel/image/${claim.claim_id}/${selectedSatelliteLayer}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700 text-[11px] text-slate-200 flex items-center gap-1.5 shadow-lg transition-all"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-teal-400" />
+                        <span>Full Resolution</span>
+                      </a>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-2 font-mono">
+                    Pixels outside the surveyed boundary polygon are masked transparent
+                  </span>
+                </div>
+
+                {/* Layer Specifications & Metric Breakdown */}
+                <div className="lg:col-span-5 space-y-4">
+                  <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-teal-400 block">
+                      Active Spectral Band Composition
+                    </span>
+                    <h4 className="text-sm font-bold text-white font-mono">
+                      {SATELLITE_LAYERS.find((l) => l.id === selectedSatelliteLayer)?.bands}
+                    </h4>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {SATELLITE_LAYERS.find((l) => l.id === selectedSatelliteLayer)?.desc}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2 text-xs">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">
+                      Live Verification Details
+                    </span>
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5 text-slate-300">
+                      <span>Claimant ID:</span>
+                      <strong className="font-mono text-slate-200">{claim.claim_id}</strong>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5 text-slate-300">
+                      <span>Acquisition Date:</span>
+                      <strong className="font-mono text-emerald-400">
+                        {sentinelStats?.metadata?.acquisition_date || analysis?.acquisition_date || "Live Scene"}
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1.5 text-slate-300">
+                      <span>Cloud Cover:</span>
+                      <strong className="font-mono text-slate-200">
+                        {sentinelStats?.metadata?.cloud_coverage_percentage ?? analysis?.cloud_percentage ?? 0}%
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span>Spatial Resolution:</span>
+                      <strong className="font-mono text-slate-200">
+                        {selectedSatelliteLayer === "ndbi" ? "20m Native (SWIR)" : "10m Native (VIS/NIR)"}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-slate-500 block">Mean NDWI (Water)</span>
-                <strong className="text-lg font-bold text-blue-400 font-mono">
-                  {(sentinelStats?.ndwi?.mean ?? analysis?.mean_ndwi) !== undefined && (sentinelStats?.ndwi?.mean ?? analysis?.mean_ndwi) !== null
-                    ? Number(sentinelStats?.ndwi?.mean ?? analysis?.mean_ndwi).toFixed(3)
-                    : "Awaiting Analysis"}
-                </strong>
-                <span className="text-[10px] text-blue-400 block">
-                  {sentinelStats?.ndwi ? `Range: [${sentinelStats.ndwi.min}, ${sentinelStats.ndwi.max}] • Moisture Index` : "Water & Moisture Index"}
+              {/* 5-Raster Comparison Gallery */}
+              <div className="space-y-3">
+                <span className="text-xs font-bold text-slate-300 block">
+                  All 5 Rendered Spectral Rasters for this Claim:
                 </span>
-              </div>
-
-              <div className="glass-panel p-4 rounded-2xl border border-slate-800">
-                <span className="text-slate-500 block">Mean NDBI (Built-up)</span>
-                <strong className="text-lg font-bold text-amber-400 font-mono">
-                  {(sentinelStats?.ndbi?.mean ?? analysis?.mean_ndbi) !== undefined && (sentinelStats?.ndbi?.mean ?? analysis?.mean_ndbi) !== null
-                    ? Number(sentinelStats?.ndbi?.mean ?? analysis?.mean_ndbi).toFixed(3)
-                    : "Awaiting Analysis"}
-                </strong>
-                <span className="text-[10px] text-amber-400 block">
-                  {sentinelStats?.ndbi ? `Range: [${sentinelStats.ndbi.min}, ${sentinelStats.ndbi.max}] • Settlement Index` : "Settlement & Built-up Index"}
-                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {SATELLITE_LAYERS.map((layer) => {
+                    const isSelected = selectedSatelliteLayer === layer.id;
+                    return (
+                      <button
+                        key={layer.id}
+                        onClick={() => setSelectedSatelliteLayer(layer.id as any)}
+                        className={`p-2.5 rounded-2xl border text-left transition-all flex flex-col items-center space-y-2 group ${
+                          isSelected
+                            ? "bg-teal-950/40 border-teal-500 shadow-lg shadow-teal-950/50 scale-[1.02]"
+                            : "bg-slate-900/50 border-slate-800 hover:border-slate-700 hover:bg-slate-800/50"
+                        }`}
+                      >
+                        <div className="w-full aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex items-center justify-center p-1">
+                          <img
+                            key={`${layer.id}-${imageVersion}`}
+                            src={`/api/sentinel/image/${claim.claim_id}/${layer.id}?t=${imageVersion}`}
+                            alt={layer.name}
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (!target.src.includes("/api/analysis/imagery/")) {
+                                target.src = `/api/analysis/imagery/claim_${claim.claim_id}_${layer.id}.png?t=${imageVersion}`;
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="w-full text-center">
+                          <span className="text-[11px] font-bold text-slate-200 block truncate">{layer.name}</span>
+                          <span className="text-[9px] text-slate-500 block truncate">{layer.badge}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Land Characteristics & Cloud Masking Metadata Bar */}
-            {sentinelStats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Land Characteristics (Numerical Thresholds)</span>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Vegetation Cover (NDVI ≥ 0.40):</span>
-                    <strong className="text-emerald-400 font-mono">{sentinelStats.land_characteristics.vegetation_area_percentage}%</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Water / Moisture Cover (NDWI &gt; 0.05):</span>
-                    <strong className="text-blue-400 font-mono">{sentinelStats.land_characteristics.water_area_percentage}%</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Built-up / Settlement (NDBI &gt; 0.05):</span>
-                    <strong className="text-amber-400 font-mono">{sentinelStats.land_characteristics.builtup_area_percentage}%</strong>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Copernicus Processing Metadata</span>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Ground Resolution:</span>
-                    <strong className="text-slate-200 font-mono">{sentinelStats.metadata.resolution_meters}m (10m VIS/NIR, 20m SWIR)</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Valid Pixels Inside Polygon:</span>
-                    <strong className="text-emerald-400 font-mono">{sentinelStats.ndvi.valid_pixel_count.toLocaleString()} px</strong>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-slate-300">
-                    <span>Scene Cloud Cover:</span>
-                    <strong className="text-slate-200 font-mono">{sentinelStats.metadata.cloud_coverage_percentage}%</strong>
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 space-y-1">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">SCL Cloud Masking Pipeline</span>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    SCL classes masked: <strong>0 (No data), 1 (Defective), 3 (Shadows), 7-9 (Clouds), 10 (Cirrus)</strong>. Only cloud-free pixels inside the surveyed polygon are analyzed.
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -651,7 +797,7 @@ export default function ClaimDetailPage() {
                       <td className="py-2.5 px-3 font-mono text-slate-400">{st.pixel_count}</td>
                       <td className="py-2.5 px-3 font-mono text-emerald-400 font-semibold">{st.area_hectares} Ha</td>
                       <td className="py-2.5 px-3 font-mono text-slate-200">{st.percentage}%</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400">{(st.confidence * 100).toFixed(0)}%</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-400">{st.confidence != null ? `${(st.confidence * 100).toFixed(0)}%` : "Not available"}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -585,7 +585,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
                     <div
                       className="h-full bg-lime-500 rounded-full"
-                      style={{ width: `${Math.min(activeResponse.satellite_telemetry.crop_pct, 100)}%` }}
+                      style={{ width: activeResponse.satellite_telemetry.crop_pct == null ? undefined : `${Math.min(activeResponse.satellite_telemetry.crop_pct, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -603,7 +603,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 rounded-full"
-                      style={{ width: `${Math.min(activeResponse.satellite_telemetry.forest_pct, 100)}%` }}
+                      style={{ width: activeResponse.satellite_telemetry.forest_pct == null ? undefined : `${Math.min(activeResponse.satellite_telemetry.forest_pct, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -622,7 +622,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                   <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
                     <div
                       className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${Math.min(activeResponse.satellite_telemetry.water_pct, 100)}%` }}
+                      style={{ width: activeResponse.satellite_telemetry.water_pct == null ? undefined : `${Math.min(activeResponse.satellite_telemetry.water_pct, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -643,7 +643,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
               <div className="space-y-1 text-xs">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Detected Spatial Assets:</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {activeResponse.satellite_telemetry.assets_detected.map((ast, i) => (
+                  {activeResponse.satellite_telemetry.assets_detected?.map((ast, i) => (
                     <span key={i} className="px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 text-[10px] font-mono">
                       {ast}
                     </span>

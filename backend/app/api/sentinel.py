@@ -73,7 +73,7 @@ def get_sentinel_statistics(
     end_date: Optional[str] = Query(default=None, description="Observation end date (YYYY-MM-DD); defaults to today"),
     max_cloud: float = Query(default=20.0, description="Max cloud cover threshold percentage"),
     resolution: float = Query(default=10.0, description="Spatial resolution in meters (10m default)"),
-    veg_threshold: float = Query(default=0.40, description="NDVI threshold for vegetation cover"),
+    veg_threshold: float = Query(default=0.20, description="NDVI threshold for living vegetation cover (0.20 per USGS/Copernicus standard)"),
     water_threshold: float = Query(default=0.05, description="NDWI threshold for water cover"),
     builtup_threshold: float = Query(default=0.05, description="NDBI threshold for built-up cover"),
     db: Session = Depends(get_db)
@@ -402,14 +402,15 @@ def run_sentinel_process_pipeline(
             mean_ndwi=sat_res["mean_ndwi"],
             mean_ndbi=sat_res["mean_ndbi"],
             processing_status="COMPLETED",
-            model_name="Copernicus-Sentinel-2-L2A",
-            model_version="v2.1.0",
-            confidence=0.92
+            model_name=None,
+            model_version=None,
+            confidence=None
         )
         db.add(sat_analysis)
         db.commit()
         db.refresh(sat_analysis)
     else:
+        sat_analysis.geometry_id = geom_rec.id
         sat_analysis.satellite_source = sat_res["satellite_source"]
         sat_analysis.acquisition_date = sat_res["acquisition_date"]
         sat_analysis.cloud_percentage = sat_res["cloud_percentage"]
@@ -422,6 +423,9 @@ def run_sentinel_process_pipeline(
         sat_analysis.mean_ndwi = sat_res["mean_ndwi"]
         sat_analysis.mean_ndbi = sat_res["mean_ndbi"]
         sat_analysis.processing_status = "COMPLETED"
+        sat_analysis.model_name = None
+        sat_analysis.model_version = None
+        sat_analysis.confidence = None
         db.commit()
         db.refresh(sat_analysis)
 
@@ -443,7 +447,7 @@ def run_sentinel_process_pipeline(
             area_m2=st["area_m2"],
             area_hectares=st["area_hectares"],
             percentage=st["percentage"],
-            confidence=st["confidence"]
+            confidence=st.get("confidence")
         )
         db.add(stat_rec)
     db.commit()
@@ -455,7 +459,8 @@ def run_sentinel_process_pipeline(
     detected_assets = extract_detected_assets(
         geojson_geom=geojson_geom,
         seg_mask=seg_mask,
-        statistics=stats_list
+        statistics=stats_list,
+        pixel_area_m2=sat_res.get("pixel_area_m2")
     )
 
     for ast in detected_assets:
@@ -465,8 +470,8 @@ def run_sentinel_process_pipeline(
             asset_type=ast["asset_type"],
             geometry=json.dumps(ast["geometry"]),
             area_m2=ast.get("area_m2"),
-            confidence=ast.get("confidence", 0.88),
-            model_name="Copernicus-SAM2"
+            confidence=ast.get("confidence"),
+            model_name=ast.get("model_name")
         )
         db.add(asset_rec)
     db.commit()

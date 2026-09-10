@@ -24,7 +24,17 @@ app = FastAPI(
 @app.exception_handler(LiveSentinelDataUnavailable)
 async def live_sentinel_unavailable(_: Request, exc: LiveSentinelDataUnavailable):
     """Never substitute synthetic data when a live observation cannot be obtained."""
-    return JSONResponse(status_code=503, content={"detail": str(exc), "source": "Copernicus Sentinel-2 L2A"})
+    detail_msg = str(exc)
+    if not detail_msg.startswith("Problem in fetching real-time"):
+        detail_msg = f"Problem in fetching real-time Sentinel-2 data: {detail_msg}"
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": detail_msg,
+            "error": "problem in fetching real time",
+            "source": "Copernicus Sentinel-2 L2A"
+        }
+    )
 
 # CORS middleware for frontend access
 app.add_middleware(

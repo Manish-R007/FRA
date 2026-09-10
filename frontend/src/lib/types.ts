@@ -64,7 +64,7 @@ export interface LandCoverStatistic {
   area_m2: number;
   area_hectares: number;
   percentage: number;
-  confidence: number;
+  confidence?: number;
 }
 
 export interface DetectedAsset {
@@ -73,8 +73,8 @@ export interface DetectedAsset {
   asset_type: string;
   geometry: any;
   area_m2?: number;
-  confidence: number;
-  model_name: string;
+  confidence?: number;
+  model_name?: string;
 }
 
 export interface SatelliteAnalysis {
@@ -93,9 +93,9 @@ export interface SatelliteAnalysis {
   mean_ndwi?: number;
   mean_ndbi?: number;
   processing_status: string;
-  model_name: string;
-  model_version: string;
-  confidence: number;
+  model_name?: string;
+  model_version?: string;
+  confidence?: number;
   statistics: LandCoverStatistic[];
   assets: DetectedAsset[];
   created_at?: string;
@@ -147,17 +147,17 @@ export interface ChatMessage {
 }
 
 export interface SatelliteTelemetry {
-  crop_pct: number;
-  forest_pct: number;
-  water_pct: number;
-  building_pct: number;
-  bare_pct: number;
+  crop_pct?: number;
+  forest_pct?: number;
+  water_pct?: number;
+  building_pct?: number;
+  bare_pct?: number;
   mean_ndvi?: number;
   mean_ndwi?: number;
-  assets_detected: string[];
+  assets_detected?: string[];
   parcel_area_ha?: number;
   claim_type?: string;
-  water_deficit: boolean;
+  water_deficit?: boolean;
 }
 
 export interface RAGCitation {
@@ -293,8 +293,11 @@ export interface IndexStats {
 
 export interface LandCharacteristics {
   vegetation_area_percentage: number;
+  dense_vegetation_percentage?: number;
+  bare_area_percentage?: number;
   water_area_percentage: number;
   builtup_area_percentage: number;
+  total_area_percentage?: number;
 }
 
 export interface SentinelLayerMetadata {

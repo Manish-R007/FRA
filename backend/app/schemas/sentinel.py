@@ -16,8 +16,11 @@ class LandPercentages(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     
     vegetation_area_percentage: float
+    dense_vegetation_percentage: Optional[float] = None
+    bare_area_percentage: Optional[float] = None
     water_area_percentage: float
     builtup_area_percentage: float
+    total_area_percentage: Optional[float] = 100.0
 
 class SentinelLayerMetadata(BaseModel):
     model_config = ConfigDict(from_attributes=True)

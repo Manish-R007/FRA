@@ -15,7 +15,7 @@ class LandCoverStatsResponse(BaseModel):
     area_m2: float
     area_hectares: float
     percentage: float
-    confidence: float
+    confidence: Optional[float] = None
 
 class AssetResponse(BaseModel):
     id: int
@@ -23,8 +23,8 @@ class AssetResponse(BaseModel):
     asset_type: str
     geometry: Dict[str, Any]
     area_m2: Optional[float] = None
-    confidence: float
-    model_name: str
+    confidence: Optional[float] = None
+    model_name: Optional[str] = None
 
 class SatelliteAnalysisResponse(BaseModel):
     id: int
@@ -42,9 +42,9 @@ class SatelliteAnalysisResponse(BaseModel):
     mean_ndwi: Optional[float] = None
     mean_ndbi: Optional[float] = None
     processing_status: str
-    model_name: str
-    model_version: str
-    confidence: float
+    model_name: Optional[str] = None
+    model_version: Optional[str] = None
+    confidence: Optional[float] = None
     statistics: List[LandCoverStatsResponse]
     assets: List[AssetResponse]
     created_at: Optional[datetime] = None

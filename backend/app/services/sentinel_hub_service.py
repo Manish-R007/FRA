@@ -1,3 +1,7 @@
+import sys
+# Bypass optional imagecodecs C-extension binary incompatibility in Python 3.12 so tifffile uses Python's native zlib
+if "imagecodecs" not in sys.modules or sys.modules["imagecodecs"] is not None:
+    sys.modules["imagecodecs"] = None
 import os
 import io
 import json
@@ -10,7 +14,7 @@ import tifffile
 from PIL import Image, ImageDraw
 from typing import Dict, Any, Tuple, Optional, List
 from datetime import datetime, timezone, timedelta
-from shapely.geometry import shape, mapping, Polygon, MultiPolygon
+from shapely.geometry import shape, mapping, Polygon, MultiPolygon, Point
 import pyproj
 
 from app.core.config import settings
@@ -67,8 +71,8 @@ class SentinelHubClient:
         if self._cached_token and now < (self._token_expiry_timestamp - 60):
             return self._cached_token
 
-        # Backoff if recent failure across any instance (5 min cooldown)
-        if now < (SentinelHubClient._shared_last_auth_failure_timestamp + 300):
+        # Backoff if recent failure across any instance (5s cooldown)
+        if now < (SentinelHubClient._shared_last_auth_failure_timestamp + 5):
             return None
 
         token_url = settings.SENTINEL_HUB_TOKEN_URL
@@ -85,27 +89,31 @@ class SentinelHubClient:
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        try:
-            with httpx.Client(timeout=20.0) as client:
-                resp = client.post(token_url, data=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    access_token = data.get("access_token")
-                    expires_in = data.get("expires_in", 3600)
-                    self._cached_token = access_token
-                    self._token_expiry_timestamp = now + float(expires_in)
-                    logger.info("Successfully acquired new Copernicus Sentinel Hub access token.")
-                    return access_token
-                else:
-                    SentinelHubClient._shared_last_auth_failure_timestamp = now
-                    logger.warning(
-                        f"Copernicus Sentinel Hub authentication failed with HTTP {resp.status_code}: {resp.text}"
-                    )
-                    return None
-        except Exception as e:
-            SentinelHubClient._shared_last_auth_failure_timestamp = now
-            logger.warning(f"Error connecting to Copernicus Sentinel Hub token endpoint: {type(e).__name__}")
-            return None
+        for attempt in range(2):
+            try:
+                with httpx.Client(timeout=25.0) as client:
+                    resp = client.post(token_url, data=payload, headers=headers)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        access_token = data.get("access_token")
+                        expires_in = data.get("expires_in", 3600)
+                        self._cached_token = access_token
+                        self._token_expiry_timestamp = now + float(expires_in)
+                        logger.info("Successfully acquired new Copernicus Sentinel Hub access token.")
+                        return access_token
+                    else:
+                        SentinelHubClient._shared_last_auth_failure_timestamp = now
+                        logger.warning(
+                            f"Copernicus Sentinel Hub authentication failed with HTTP {resp.status_code}: {resp.text}"
+                        )
+                        return None
+            except Exception as e:
+                logger.warning(f"Error connecting to Copernicus Sentinel Hub token endpoint (attempt {attempt + 1}): {type(e).__name__}")
+                if attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                SentinelHubClient._shared_last_auth_failure_timestamp = now
+                return None
 
     def search_catalog(
         self,
@@ -137,54 +145,58 @@ class SentinelHubClient:
             "limit": 100
         }
 
-        try:
-            with httpx.Client(timeout=15.0) as client:
-                resp = client.post(catalog_url, json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    features = data.get("features", [])
-                    if not features:
-                        logger.info("No Sentinel-2 scenes matched catalog query.")
-                        return None
-                    # Prefer the newest scene within the requested threshold. If none
-                    # exists, use the least-cloudy real scene and let SCL/dataMask
-                    # determine whether this particular parcel has usable pixels.
-                    valid_features = [
-                        f for f in features
-                        if f.get("properties", {}).get("eo:cloud_cover", 100.0) <= float(max_cloud_cover)
-                    ]
-                    if valid_features:
-                        candidate_scenes = sorted(
-                            valid_features,
-                            key=lambda f: f.get("properties", {}).get("datetime", ""),
-                            reverse=True,
-                        )
-                        threshold_met = True
+        for attempt in range(2):
+            try:
+                with httpx.Client(timeout=45.0) as client:
+                    resp = client.post(catalog_url, json=payload, headers=headers)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        features = data.get("features", [])
+                        if not features:
+                            logger.info("No Sentinel-2 scenes matched catalog query.")
+                            return None
+                        # Prefer the newest scene within the requested threshold. If none
+                        # exists, use the least-cloudy real scene and let SCL/dataMask
+                        # determine whether this particular parcel has usable pixels.
+                        valid_features = [
+                            f for f in features
+                            if f.get("properties", {}).get("eo:cloud_cover", 100.0) <= float(max_cloud_cover)
+                        ]
+                        if valid_features:
+                            candidate_scenes = sorted(
+                                valid_features,
+                                key=lambda f: f.get("properties", {}).get("datetime", ""),
+                                reverse=True,
+                            )
+                            threshold_met = True
+                        else:
+                            candidate_scenes = sorted(
+                                features,
+                                key=lambda f: (
+                                    float(f.get("properties", {}).get("eo:cloud_cover", 100.0)),
+                                    f.get("properties", {}).get("datetime", ""),
+                                ),
+                            )
+                            threshold_met = False
+                        best_scene = candidate_scenes[0]
+                        props = best_scene.get("properties", {})
+                        return {
+                            "id": best_scene.get("id"),
+                            "datetime": props.get("datetime", end_date),
+                            "cloud_cover": props.get("eo:cloud_cover", 0.0),
+                            "cloud_threshold_met": threshold_met,
+                            "platform": props.get("platform", "Sentinel-2"),
+                            "tile_id": props.get("sentinel:mgrs_tile", "UNKNOWN")
+                        }
                     else:
-                        candidate_scenes = sorted(
-                            features,
-                            key=lambda f: (
-                                float(f.get("properties", {}).get("eo:cloud_cover", 100.0)),
-                                f.get("properties", {}).get("datetime", ""),
-                            ),
-                        )
-                        threshold_met = False
-                    best_scene = candidate_scenes[0]
-                    props = best_scene.get("properties", {})
-                    return {
-                        "id": best_scene.get("id"),
-                        "datetime": props.get("datetime", end_date),
-                        "cloud_cover": props.get("eo:cloud_cover", 0.0),
-                        "cloud_threshold_met": threshold_met,
-                        "platform": props.get("platform", "Sentinel-2"),
-                        "tile_id": props.get("sentinel:mgrs_tile", "UNKNOWN")
-                    }
-                else:
-                    logger.warning(f"Catalog search returned HTTP {resp.status_code}: {resp.text}")
-                    return None
-        except Exception as e:
-            logger.warning(f"Catalog query failed: {type(e).__name__}")
-            return None
+                        logger.warning(f"Catalog search returned HTTP {resp.status_code}: {resp.text}")
+                        return None
+            except Exception as e:
+                logger.warning(f"Catalog query attempt {attempt + 1} failed: {type(e).__name__}")
+                if attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                return None
 
     def _get_evalscript(self, layer_type: str) -> str:
         """
@@ -196,7 +208,7 @@ class SentinelHubClient:
 function setup() {
   return {
     input: ["B04", "B03", "B02", "SCL", "dataMask"],
-    output: { bands: 4, sampleType: "AUTO" }
+    output: { bands: 4, sampleType: "UINT8" }
   };
 }
 function evaluatePixel(sample) {
@@ -212,7 +224,7 @@ function evaluatePixel(sample) {
 function setup() {
   return {
     input: ["B08", "B04", "B03", "SCL", "dataMask"],
-    output: { bands: 4, sampleType: "AUTO" }
+    output: { bands: 4, sampleType: "UINT8" }
   };
 }
 function evaluatePixel(sample) {
@@ -228,7 +240,7 @@ function evaluatePixel(sample) {
 function setup() {
   return {
     input: ["B08", "B04", "SCL", "dataMask"],
-    output: { bands: 4, sampleType: "AUTO" }
+    output: { bands: 4, sampleType: "UINT8" }
   };
 }
 function evaluatePixel(sample) {
@@ -245,7 +257,7 @@ function evaluatePixel(sample) {
 function setup() {
   return {
     input: ["B03", "B08", "SCL", "dataMask"],
-    output: { bands: 4, sampleType: "AUTO" }
+    output: { bands: 4, sampleType: "UINT8" }
   };
 }
 function evaluatePixel(sample) {
@@ -261,7 +273,7 @@ function evaluatePixel(sample) {
 function setup() {
   return {
     input: ["B11", "B08", "SCL", "dataMask"],
-    output: { bands: 4, sampleType: "AUTO" }
+    output: { bands: 4, sampleType: "UINT8" }
   };
 }
 function evaluatePixel(sample) {
@@ -328,6 +340,15 @@ function evaluatePixel(sample) {
             w = max(int(base_size * aspect), 128)
             
         return max(min(w, 1024), 128), max(min(h, 1024), 128)
+
+    @staticmethod
+    def _parcel_pixel_mask(geojson_geom: Dict[str, Any], width: int, height: int) -> np.ndarray:
+        """Return the uploaded geometry mask at Process API pixel centers."""
+        geom = shape(geojson_geom)
+        minx, miny, maxx, maxy = geom.bounds
+        xs = minx + (np.arange(width) + 0.5) * (maxx - minx) / width
+        ys = maxy - (np.arange(height) + 0.5) * (maxy - miny) / height
+        return np.array([[geom.covers(Point(x, y)) for x in xs] for y in ys], dtype=bool)
 
     def request_process_api(
         self,
@@ -422,279 +443,6 @@ function evaluatePixel(sample) {
             logger.warning(f"Process API request failed: {type(e).__name__}")
             return None
 
-    def _calculate_geographic_landcover_masks(
-        self,
-        minx: float, miny: float, maxx: float, maxy: float,
-        width: int, height: int,
-        geojson_geom: Any, claim_id: Any
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Computes exact pixel-level boolean masks (water_mask, homestead_mask, forest_mask)
-        based on real geographic coordinates (lat/lon) and GeoJSON metadata.
-        """
-        lons = np.linspace(minx, maxx, width)
-        lats = np.linspace(maxy, miny, height)  # Row 0 is north (maxy), row H-1 is south (miny)
-        grid_lons, grid_lats = np.meshgrid(lons, lats)
-
-        props = {}
-        if isinstance(geojson_geom, dict):
-            props = geojson_geom.get("properties", {}) or {}
-        props_str = json.dumps(geojson_geom).lower() if isinstance(geojson_geom, dict) else ""
-        claim_str = str(claim_id).lower()
-
-        # Direct explicit property overrides from uploaded GeoJSON
-        is_explicit_water = (
-            props.get("water") is True or
-            props.get("land_cover") == "water" or
-            props.get("water_pct") == 100 or
-            props.get("water_fraction") == 1.0 or
-            props.get("natural") == "water" or
-            props.get("waterway") is not None
-        )
-
-        is_explicit_forest = (
-            props.get("forest") is True or
-            props.get("land_cover") == "forest" or
-            props.get("forest_pct") == 100
-        )
-
-        # 1. Geographic Water Body Boundary Detection:
-        # A. Bhadra Reservoir, Karnataka:
-        # Latitude: 13.60 to 13.78 N, Longitude: 75.50 to 75.75 E.
-        # The open water body boundary of Bhadra Reservoir is south of 13.7018° N (grid_lats <= 13.7018).
-        in_bhadra_region = (miny <= 13.78 and maxy >= 13.60) and (minx <= 75.75 and maxx >= 75.50)
-
-        # B. General coordinate-based water basins across India
-        in_water_basin = (
-            in_bhadra_region or
-            (miny <= 21.75 and maxy >= 21.45 and minx <= 84.10 and maxx >= 83.70) or  # Hirakud
-            (miny <= 20.70 and maxy >= 19.70 and minx <= 80.60 and maxx >= 79.70)     # Wainganga basin
-        )
-
-        has_water_cue = (
-            is_explicit_water or
-            in_water_basin or
-            any(w in props_str for w in ["water", "reservoir", "lake", "stream", "river", "bhadra", "pond"]) or
-            any(w in claim_str for w in ["water", "bhadra", "smg", "reservoir", "pond"])
-        )
-
-        water_mask = np.zeros((height, width), dtype=bool)
-        if is_explicit_water:
-            water_mask = np.ones((height, width), dtype=bool)
-        elif in_bhadra_region:
-            # Pixels located south of 13.7018° N are in the Bhadra Reservoir water body!
-            # If the polygon is entirely south of 13.7018, this yields 100% water.
-            # If the polygon is entirely north of 13.7018, this yields 0% water.
-            water_mask = (grid_lats <= 13.7018)
-        elif has_water_cue:
-            water_prop_pct = props.get("water_pct")
-            if water_prop_pct is not None:
-                frac = float(water_prop_pct) / 100.0
-                water_mask = (np.linspace(1, 0, height)[:, None] <= frac)
-            elif "pond" in props_str or "stream" in props_str:
-                water_mask = (grid_lats <= miny + (maxy - miny) * 0.25) & (grid_lons >= minx + (maxx - minx) * 0.6)
-            else:
-                water_mask = (grid_lats <= (miny + maxy) / 2.0)
-
-        # 2. Homestead / Built-up structure mask (located on dry land)
-        homestead_mask = np.zeros((height, width), dtype=bool)
-        if not is_explicit_water and not np.all(water_mask):
-            dry_land = ~water_mask
-            y_dry, x_dry = np.where(dry_land)
-            if len(y_dry) > 0:
-                h_count = max(int(len(y_dry) * 0.04), 1)
-                homestead_mask[y_dry[:h_count], x_dry[:h_count]] = True
-
-        # 3. Forest vs Agriculture mask for remaining dry land
-        forest_mask = ~water_mask & ~homestead_mask
-
-        return water_mask, homestead_mask, forest_mask
-
-    def synthesize_fallback_bands_and_rasters(
-        self,
-        claim_id: Any,
-        geojson_geom: Any,
-        width: int = 512,
-        height: int = 512
-    ) -> Dict[str, Any]:
-        """
-        Physical multi-spectral synthesis with authentic geographic coordinate-level
-        landcover detection, SCL classification, and colorized raster visualization.
-        """
-        geom = shape(geojson_geom) if isinstance(geojson_geom, dict) else geojson_geom
-        minx, miny, maxx, maxy = geom.bounds
-        dx = max(maxx - minx, 1e-6)
-        dy = max(maxy - miny, 1e-6)
-
-        # 1. Rasterize polygon mask
-        mask_img = Image.new("L", (width, height), 0)
-        draw = ImageDraw.Draw(mask_img)
-
-        def to_pixel(coords):
-            pts = []
-            for lon, lat in coords:
-                px = int((lon - minx) / dx * (width - 1))
-                py = int((maxy - lat) / dy * (height - 1))  # Invert Y for image coordinate
-                pts.append((px, py))
-            return pts
-
-        if isinstance(geom, Polygon):
-            draw.polygon(to_pixel(geom.exterior.coords), fill=255)
-        elif isinstance(geom, MultiPolygon):
-            for poly in geom.geoms:
-                draw.polygon(to_pixel(poly.exterior.coords), fill=255)
-
-        poly_mask = np.array(mask_img) > 0
-
-        # Deterministic seed based on coordinates & claim_id
-        seed = abs(hash(f"{claim_id}_{minx:.5f}_{miny:.5f}")) % (2**31)
-        np.random.seed(seed)
-
-        x = np.linspace(0, 1, width)
-        y = np.linspace(0, 1, height)
-        xx, yy = np.meshgrid(x, y)
-
-        # Natural continuous spatial variations
-        spatial_pattern1 = np.sin(xx * 5 + yy * 4) * 0.18 + np.cos(xx * 9 - yy * 7) * 0.12
-        spatial_pattern2 = np.sin(xx * 12 + yy * 10) * 0.08 + np.random.normal(0, 0.02, (height, width))
-
-        # Calculate exact geographic land-cover masks from coordinates
-        water_mask_geom, homestead_mask_geom, forest_mask_geom = self._calculate_geographic_landcover_masks(
-            minx=minx, miny=miny, maxx=maxx, maxy=maxy,
-            width=width, height=height,
-            geojson_geom=geojson_geom, claim_id=claim_id
-        )
-
-        # Baseline Sentinel-2 bands for vegetation / agriculture
-        b2 = np.clip(0.06 + 0.03 * spatial_pattern2, 0.02, 0.20)  # Blue
-        b3 = np.clip(0.12 + 0.04 * spatial_pattern1, 0.04, 0.25)  # Green
-        b4 = np.clip(0.08 + 0.03 * spatial_pattern1, 0.03, 0.22)  # Red
-        b8 = np.clip(0.65 + 0.16 * np.cos(xx * 4 + yy * 5) + spatial_pattern1 * 0.10, 0.40, 0.90)  # NIR
-        b11 = np.clip(0.18 + 0.08 * np.sin(xx * 6) + spatial_pattern2 * 0.04, 0.06, 0.35)         # SWIR 1
-
-        # Apply physical optical water reflectance in water zone:
-        # Total absorption in NIR (B08) and SWIR (B11); high reflectance in Green (B03) and Blue (B02)
-        b2 = np.where(water_mask_geom, np.clip(0.22 + 0.03 * spatial_pattern2, 0.16, 0.30), b2)
-        b3 = np.where(water_mask_geom, np.clip(0.27 + 0.04 * spatial_pattern1, 0.20, 0.38), b3)
-        b4 = np.where(water_mask_geom, np.clip(0.06 + 0.02 * spatial_pattern1, 0.03, 0.12), b4)
-        b8 = np.where(water_mask_geom, np.clip(0.02 + 0.01 * np.abs(spatial_pattern1), 0.01, 0.04), b8)   # Low NIR
-        b11 = np.where(water_mask_geom, np.clip(0.01 + 0.01 * np.abs(spatial_pattern2), 0.005, 0.03), b11) # Low SWIR
-
-        # Apply settlement/homestead reflectance
-        b2 = np.where(homestead_mask_geom & ~water_mask_geom, 0.15, b2)
-        b3 = np.where(homestead_mask_geom & ~water_mask_geom, 0.19, b3)
-        b4 = np.where(homestead_mask_geom & ~water_mask_geom, 0.26, b4)
-        b8 = np.where(homestead_mask_geom & ~water_mask_geom, 0.28, b8)
-        b11 = np.where(homestead_mask_geom & ~water_mask_geom, 0.38, b11)
-
-        # SCL scene classification simulation: 4=Vegetation, 5=Bare/Non-veg/Built-up, 6=Water
-        scl = np.full((height, width), 4, dtype=np.uint8)
-        scl[homestead_mask_geom] = 5
-        scl[water_mask_geom] = 6
-
-        # Calculate exact numerical indices
-        eps = 1e-6
-        ndvi = np.where(poly_mask, (b8 - b4) / (b8 + b4 + eps), 0.0)
-        ndvi = np.clip(ndvi, -1.0, 1.0)
-
-        ndwi = np.where(poly_mask, (b3 - b8) / (b3 + b8 + eps), 0.0)
-        ndwi = np.clip(ndwi, -1.0, 1.0)
-
-        ndbi = np.where(poly_mask, (b11 - b8) / (b11 + b8 + eps), 0.0)
-        ndbi = np.clip(ndbi, -1.0, 1.0)
-
-        out_dir = settings.SATELLITE_DIR
-        os.makedirs(out_dir, exist_ok=True)
-
-        # 1. True Color RGB (B04, B03, B02)
-        rgb = np.zeros((height, width, 4), dtype=np.uint8)
-        factor = 2.5
-        for i, b in enumerate([b4, b3, b2]):
-            rgb[:, :, i] = np.clip(b * factor * 255, 0, 255).astype(np.uint8)
-        rgb[:, :, 3] = np.where(poly_mask, 255, 0)
-        rgb_path = os.path.join(out_dir, f"claim_{claim_id}_rgb.png")
-        Image.fromarray(rgb).save(rgb_path)
-
-        # 2. Color Infrared CIR (B08, B04, B03)
-        cir = np.zeros((height, width, 4), dtype=np.uint8)
-        for i, b in enumerate([b8, b4, b3]):
-            cir[:, :, i] = np.clip(b * factor * 255, 0, 255).astype(np.uint8)
-        cir[:, :, 3] = np.where(poly_mask, 255, 0)
-        cir_path = os.path.join(out_dir, f"claim_{claim_id}_cir.png")
-        Image.fromarray(cir).save(cir_path)
-
-        # 3. NDVI Colorized Visualization
-        ndvi_img = np.zeros((height, width, 4), dtype=np.uint8)
-        for y_i in range(height):
-            for x_i in range(width):
-                if poly_mask[y_i, x_i]:
-                    val = ndvi[y_i, x_i]
-                    if val < 0.1:
-                        ndvi_img[y_i, x_i] = [215, 48, 39, 255]     # Red / Bare
-                    elif val < 0.3:
-                        ndvi_img[y_i, x_i] = [254, 224, 139, 255]   # Yellow / Sparse
-                    elif val < 0.5:
-                        ndvi_img[y_i, x_i] = [166, 217, 106, 255]   # Light green / Crops
-                    else:
-                        ndvi_img[y_i, x_i] = [26, 150, 65, 255]     # Dark green / Forest
-        ndvi_path = os.path.join(out_dir, f"claim_{claim_id}_ndvi.png")
-        Image.fromarray(ndvi_img).save(ndvi_path)
-
-        # 4. NDWI Colorized Visualization
-        ndwi_img = np.zeros((height, width, 4), dtype=np.uint8)
-        for y_i in range(height):
-            for x_i in range(width):
-                if poly_mask[y_i, x_i]:
-                    val = ndwi[y_i, x_i]
-                    if val > 0.1:
-                        ndwi_img[y_i, x_i] = [43, 131, 186, 255]    # Water body
-                    elif val > -0.1:
-                        ndwi_img[y_i, x_i] = [171, 221, 164, 255]  # Moist soil
-                    else:
-                        ndwi_img[y_i, x_i] = [215, 25, 28, 255]     # Dry soil
-        ndwi_path = os.path.join(out_dir, f"claim_{claim_id}_ndwi.png")
-        Image.fromarray(ndwi_img).save(ndwi_path)
-
-        # 5. NDBI Colorized Visualization
-        ndbi_img = np.zeros((height, width, 4), dtype=np.uint8)
-        for y_i in range(height):
-            for x_i in range(width):
-                if poly_mask[y_i, x_i]:
-                    val = ndbi[y_i, x_i]
-                    if val > 0.05:
-                        ndbi_img[y_i, x_i] = [215, 25, 28, 255]    # Built-up / Settlement
-                    elif val > -0.05:
-                        ndbi_img[y_i, x_i] = [254, 224, 139, 255]  # Mixed
-                    else:
-                        ndbi_img[y_i, x_i] = [43, 131, 186, 255]   # Vegetation / Water
-        ndbi_path = os.path.join(out_dir, f"claim_{claim_id}_ndbi.png")
-        Image.fromarray(ndbi_img).save(ndbi_path)
-
-        return {
-            "bands": {
-                "B2": b2 * poly_mask,
-                "B3": b3 * poly_mask,
-                "B4": b4 * poly_mask,
-                "B8": b8 * poly_mask,
-                "B11": b11 * poly_mask,
-                "mask": poly_mask
-            },
-            "indices": {
-                "ndvi": ndvi,
-                "ndwi": ndwi,
-                "ndbi": ndbi
-            },
-            "scl": scl,
-            "mask": poly_mask,
-            "paths": {
-                "rgb": rgb_path,
-                "cir": cir_path,
-                "ndvi": ndvi_path,
-                "ndwi": ndwi_path,
-                "ndbi": ndbi_path
-            }
-        }
-
     def process_and_compute_parcel(
         self,
         claim_id: str,
@@ -703,15 +451,22 @@ function evaluatePixel(sample) {
         end_date: Optional[str] = None,
         max_cloud_cover: float = 20.0,
         resolution: float = 10.0,
-        veg_threshold: float = 0.40,
+        veg_threshold: float = 0.20,
         water_threshold: float = 0.05,
         builtup_threshold: float = 0.05
     ) -> Dict[str, Any]:
-        """Fetch one current Sentinel-2 L2A scene and calculate parcel metrics from its pixels."""
+        """Fetch current Sentinel-2 L2A scene from Copernicus Data Space Ecosystem and calculate parcel metrics from real pixels."""
         if not self.has_credentials():
             raise LiveSentinelDataUnavailable(
-                "Live Sentinel-2 analysis is not configured. Set SENTINEL_HUB_CLIENT_ID and "
-                "SENTINEL_HUB_CLIENT_SECRET in backend/.env."
+                "Problem in fetching real-time Sentinel-2 data: Credentials are not configured. "
+                "Set SENTINEL_HUB_CLIENT_ID and SENTINEL_HUB_CLIENT_SECRET in backend/.env."
+            )
+
+        token = self.get_auth_token()
+        if not token:
+            raise LiveSentinelDataUnavailable(
+                "Problem in fetching real-time Sentinel-2 data: Authentication failed with Copernicus Data Space Ecosystem. "
+                "Unable to obtain OAuth2 access token. Please verify client ID and secret."
             )
 
         now = datetime.now(timezone.utc)
@@ -736,46 +491,46 @@ function evaluatePixel(sample) {
         scene_meta = self.search_catalog(geojson_geom, start_date, end_date, max_cloud_cover)
         if not scene_meta:
             raise LiveSentinelDataUnavailable(
-                f"No Sentinel-2 L2A scene was found for this area "
-                f"between {start_date} and {end_date}."
+                f"Problem in fetching real-time Sentinel-2 data: No Sentinel-2 L2A scene found for this parcel boundary "
+                f"between {start_date} and {end_date} (max cloud cover: {max_cloud_cover}%)."
             )
         try:
             scene_time = datetime.fromisoformat(scene_meta["datetime"].replace("Z", "+00:00"))
         except (KeyError, ValueError):
-            raise LiveSentinelDataUnavailable("The Sentinel catalog returned a scene without a valid acquisition time.")
+            raise LiveSentinelDataUnavailable(
+                "Problem in fetching real-time Sentinel-2 data: The Copernicus catalog returned a scene without a valid acquisition timestamp."
+            )
         scene_start = (scene_time - timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
         scene_end = (scene_time + timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
 
         scene_cloud_cover = float(scene_meta.get("cloud_cover", 100.0))
         effective_cloud_limit = min(100.0, max(float(max_cloud_cover), scene_cloud_cover))
-        # The float GeoTIFF is the authoritative science product. It is the only
-        # mandatory response; RGB and colour-index layers are presentation-only.
+        # The float GeoTIFF is the authoritative science product from Copernicus CDSE
+        # containing all 10 spectral bands and indices: B02, B03, B04, B08, B11, ndvi, ndwi, ndbi, SCL, dataMask.
         raw_content = self.request_process_api(
             geojson_geom, "raw_indices", scene_start, scene_end, effective_cloud_limit, resolution
         )
         if not raw_content:
             raise LiveSentinelDataUnavailable(
-                f"Copernicus Process API did not return the analysis raster for scene {scene_meta['id']}."
+                f"Problem in fetching real-time Sentinel-2 data: Copernicus Process API did not return the analysis raster for scene {scene_meta['id']}."
             )
-        contents = {"raw_indices": raw_content}
-        for layer in ["true_color", "cir", "ndvi", "ndwi", "ndbi"]:
-            content = self.request_process_api(geojson_geom, layer, scene_start, scene_end, effective_cloud_limit, resolution)
-            if content:
-                contents[layer] = content
-            else:
-                logger.warning("Optional Sentinel-2 %s preview was not returned for scene %s.", layer, scene_meta["id"])
 
         try:
             raw = np.asarray(tifffile.imread(io.BytesIO(raw_content)), dtype=np.float32)
             if raw.ndim != 3 or raw.shape[-1] != 10:
                 raise ValueError(f"expected 10 bands, received shape {raw.shape}")
         except Exception as exc:
-            raise LiveSentinelDataUnavailable(f"Could not decode live Sentinel-2 analysis raster: {exc}") from exc
+            raise LiveSentinelDataUnavailable(
+                f"Problem in fetching real-time Sentinel-2 data: Could not decode live Sentinel-2 analysis raster: {exc}"
+            ) from exc
 
         b2, b3, b4, b8, b11, ndvi, ndwi, ndbi, scl, data_mask = (raw[..., i] for i in range(10))
-        valid = (data_mask > 0) & ~np.isin(np.rint(scl).astype(np.int16), list(SCL_CLOUD_IDS))
+        parcel_mask = self._parcel_pixel_mask(geojson_geom, raw.shape[1], raw.shape[0])
+        valid = parcel_mask & (data_mask > 0) & ~np.isin(np.rint(scl).astype(np.int16), list(SCL_CLOUD_IDS))
         if not np.any(valid):
-            raise LiveSentinelDataUnavailable("The selected Sentinel-2 scene has no cloud-free pixels inside this parcel.")
+            raise LiveSentinelDataUnavailable(
+                "Problem in fetching real-time Sentinel-2 data: The selected Sentinel-2 scene has no cloud-free observation pixels inside this parcel."
+            )
         ndvi_vals, ndwi_vals, ndbi_vals = ndvi[valid], ndwi[valid], ndbi[valid]
 
         def compute_stats(arr: np.ndarray) -> Dict[str, Any]:
@@ -794,30 +549,77 @@ function evaluatePixel(sample) {
         ndwi_stats = compute_stats(ndwi_vals)
         ndbi_stats = compute_stats(ndbi_vals)
 
-        # All values below are measurements from the Process API float raster.
-        veg_pixels = int(np.sum(ndvi_vals >= veg_threshold))
-        water_pixels = int(np.sum(ndwi_vals > water_threshold))
-        built_pixels = int(np.sum(ndbi_vals > builtup_threshold))
+        # Multi-band ML land-cover inference across the valid parcel mask
+        from app.services.ml_classifier import ml_classifier
+        seg_mask, _ = ml_classifier.predict_land_cover(
+            bands={"B2": b2, "B3": b3, "B4": b4, "B8": b8, "B11": b11, "mask": valid},
+            indices={"ndvi": ndvi, "ndwi": ndwi, "ndbi": ndbi}
+        )
 
-        total_valid = max(len(ndvi_vals), 1)
+        total_valid = max(int(np.sum(valid)), 1)
+        # Class 0: Forest, 1: Crop, 5: Grassland (Living green vegetation)
+        veg_pixels = int(np.sum(np.isin(seg_mask, [0, 1, 5]) & valid))
+        dense_veg_pixels = int(np.sum((seg_mask == 0) & valid))
+        water_pixels = int(np.sum((seg_mask == 2) & valid))
+        built_pixels = int(np.sum((seg_mask == 3) & valid))
+        bare_pixels = int(np.sum((seg_mask == 4) & valid))
+
         veg_pct = round((veg_pixels / total_valid) * 100.0, 2)
+        dense_veg_pct = round((dense_veg_pixels / total_valid) * 100.0, 2)
         water_pct = round((water_pixels / total_valid) * 100.0, 2)
         built_pct = round((built_pixels / total_valid) * 100.0, 2)
+        bare_pct = round((bare_pixels / total_valid) * 100.0, 2)
 
+        # Render and persist all 5 multispectral preview rasters directly from authoritative reflectance data
         out_dir = settings.SATELLITE_DIR
         os.makedirs(out_dir, exist_ok=True)
-        for layer, content in contents.items():
-            if layer == "raw_indices":
-                continue
-            name = "rgb" if layer == "true_color" else layer
-            with open(os.path.join(out_dir, f"claim_{claim_id}_{name}.png"), "wb") as output:
-                output.write(content)
+        alpha = np.where(parcel_mask & (data_mask > 0), 255, 0).astype(np.uint8)
+
+        # 1. True Color RGB: B04 (Red), B03 (Green), B02 (Blue) with standard 2.5x gain
+        r_rgb = np.clip(b4 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        g_rgb = np.clip(b3 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        b_rgb = np.clip(b2 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        rgba_rgb = np.stack([r_rgb, g_rgb, b_rgb, alpha], axis=-1)
+        Image.fromarray(rgba_rgb, "RGBA").save(os.path.join(out_dir, f"claim_{claim_id}_rgb.png"))
+
+        # 2. Color Infrared CIR: B08 (NIR -> Red), B04 (Red -> Green), B03 (Green -> Blue)
+        r_cir = np.clip(b8 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        g_cir = np.clip(b4 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        b_cir = np.clip(b3 * 2.5 * 255.0, 0, 255).astype(np.uint8)
+        rgba_cir = np.stack([r_cir, g_cir, b_cir, alpha], axis=-1)
+        Image.fromarray(rgba_cir, "RGBA").save(os.path.join(out_dir, f"claim_{claim_id}_cir.png"))
+
+        # 3. NDVI Vegetation Map: standard 4-class remote sensing gradient
+        rgba_ndvi = np.zeros((*ndvi.shape, 4), dtype=np.uint8)
+        rgba_ndvi[ndvi < 0.1] = [215, 48, 39, 255]
+        rgba_ndvi[(ndvi >= 0.1) & (ndvi < 0.3)] = [254, 224, 139, 255]
+        rgba_ndvi[(ndvi >= 0.3) & (ndvi < 0.5)] = [166, 217, 106, 255]
+        rgba_ndvi[ndvi >= 0.5] = [26, 150, 65, 255]
+        rgba_ndvi[:, :, 3] = alpha
+        Image.fromarray(rgba_ndvi, "RGBA").save(os.path.join(out_dir, f"claim_{claim_id}_ndvi.png"))
+
+        # 4. NDWI Moisture Map: standard moisture/water gradient
+        rgba_ndwi = np.zeros((*ndwi.shape, 4), dtype=np.uint8)
+        rgba_ndwi[ndwi > 0.1] = [43, 131, 186, 255]
+        rgba_ndwi[(ndwi >= -0.1) & (ndwi <= 0.1)] = [171, 221, 164, 255]
+        rgba_ndwi[ndwi < -0.1] = [215, 25, 28, 255]
+        rgba_ndwi[:, :, 3] = alpha
+        Image.fromarray(rgba_ndwi, "RGBA").save(os.path.join(out_dir, f"claim_{claim_id}_ndwi.png"))
+
+        # 5. NDBI Built-up Map: standard settlement/built-up gradient
+        rgba_ndbi = np.zeros((*ndbi.shape, 4), dtype=np.uint8)
+        rgba_ndbi[ndbi > 0.05] = [215, 25, 28, 255]
+        rgba_ndbi[(ndbi >= -0.05) & (ndbi <= 0.05)] = [254, 224, 139, 255]
+        rgba_ndbi[ndbi < -0.05] = [43, 131, 186, 255]
+        rgba_ndbi[:, :, 3] = alpha
+        Image.fromarray(rgba_ndbi, "RGBA").save(os.path.join(out_dir, f"claim_{claim_id}_ndbi.png"))
+
         urls = {
-            "rgb_url": f"/api/analysis/imagery/claim_{claim_id}_rgb.png" if "true_color" in contents else None,
-            "cir_url": f"/api/analysis/imagery/claim_{claim_id}_cir.png" if "cir" in contents else None,
-            "ndvi_url": f"/api/analysis/imagery/claim_{claim_id}_ndvi.png" if "ndvi" in contents else None,
-            "ndwi_url": f"/api/analysis/imagery/claim_{claim_id}_ndwi.png" if "ndwi" in contents else None,
-            "ndbi_url": f"/api/analysis/imagery/claim_{claim_id}_ndbi.png" if "ndbi" in contents else None,
+            "rgb_url": f"/api/analysis/imagery/claim_{claim_id}_rgb.png",
+            "cir_url": f"/api/analysis/imagery/claim_{claim_id}_cir.png",
+            "ndvi_url": f"/api/analysis/imagery/claim_{claim_id}_ndvi.png",
+            "ndwi_url": f"/api/analysis/imagery/claim_{claim_id}_ndwi.png",
+            "ndbi_url": f"/api/analysis/imagery/claim_{claim_id}_ndbi.png",
         }
 
         metadata = {
@@ -832,7 +634,7 @@ function evaluatePixel(sample) {
             "masked_scl_classes": MASKED_SCL_CLASSES,
             "parcel_area_hectares": parcel_ha,
             "bounds": bounds,
-            "available_preview_layers": [layer for layer in contents if layer != "raw_indices"]
+            "available_preview_layers": ["rgb", "cir", "ndvi", "ndwi", "ndbi"]
         }
 
         result = {
@@ -845,14 +647,18 @@ function evaluatePixel(sample) {
             "raster_urls": urls,
             "bands": {"B2": b2, "B3": b3, "B4": b4, "B8": b8, "B11": b11, "mask": valid},
             "indices": {"ndvi": ndvi, "ndwi": ndwi, "ndbi": ndbi},
+            "pixel_area_m2": total_area_m2 / total_valid,
             "statistics": {
                 "ndvi": ndvi_stats,
                 "ndwi": ndwi_stats,
                 "ndbi": ndbi_stats,
                 "land_characteristics": {
                     "vegetation_area_percentage": veg_pct,
+                    "dense_vegetation_percentage": dense_veg_pct,
+                    "bare_area_percentage": bare_pct,
                     "water_area_percentage": water_pct,
-                    "builtup_area_percentage": built_pct
+                    "builtup_area_percentage": built_pct,
+                    "total_area_percentage": 100.0
                 },
                 "metadata": metadata
             },

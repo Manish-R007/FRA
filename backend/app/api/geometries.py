@@ -10,6 +10,8 @@ from app.models.geometry import FRAGeometry
 from app.models.satellite import SatelliteAnalysis, LandCoverStatistic
 from app.schemas.geometry import FRAGeometryCreate, FRAGeometryUpdate, FRAGeometryResponse, GeoJSONFeatureCollection, GeoJSONFeature
 from app.services.gis_service import validate_and_process_geometry, parse_geospatial_features
+from shapely.geometry import mapping, shape
+from shapely.ops import unary_union
 from app.services.audit_service import record_audit
 
 router = APIRouter(prefix="/geometries", tags=["GIS & Geometries"])
@@ -116,7 +118,7 @@ def get_all_geometries(
             "building_percentage": stats_dict.get("building", 0.0),
             "bare_land_percentage": stats_dict.get("bare_land", 0.0),
             "grassland_percentage": stats_dict.get("grassland", 0.0),
-            "ai_confidence": sat.confidence if sat else 0.88
+            "ai_confidence": sat.confidence if sat else None
         }
 
         features.append(GeoJSONFeature(
@@ -182,13 +184,15 @@ def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str
                 mean_ndwi=sat_res["mean_ndwi"],
                 mean_ndbi=sat_res["mean_ndbi"],
                 processing_status="COMPLETED",
-                model_name="Copernicus-Sentinel-2-L2A",
-                confidence=0.92
+                model_name=None,
+                model_version=None,
+                confidence=None
             )
             db.add(sat_analysis)
             db.commit()
             db.refresh(sat_analysis)
         else:
+            sat_analysis.geometry_id = geom_id
             sat_analysis.acquisition_date = sat_res["acquisition_date"]
             sat_analysis.cloud_percentage = sat_res["cloud_percentage"]
             sat_analysis.image_url = sat_res["raster_urls"]["rgb_url"]
@@ -200,6 +204,9 @@ def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str
             sat_analysis.mean_ndwi = sat_res["mean_ndwi"]
             sat_analysis.mean_ndbi = sat_res["mean_ndbi"]
             sat_analysis.processing_status = "COMPLETED"
+            sat_analysis.model_name = None
+            sat_analysis.model_version = None
+            sat_analysis.confidence = None
             db.commit()
             db.refresh(sat_analysis)
 
@@ -219,7 +226,7 @@ def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str
                 area_m2=st["area_m2"],
                 area_hectares=st["area_hectares"],
                 percentage=st["percentage"],
-                confidence=st["confidence"]
+                confidence=st.get("confidence")
             )
             db.add(stat_rec)
         db.commit()
@@ -230,7 +237,8 @@ def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str
         detected_assets = extract_detected_assets(
             geojson_geom=geom_dict,
             seg_mask=seg_mask,
-            statistics=stats_list
+            statistics=stats_list,
+            pixel_area_m2=sat_res.get("pixel_area_m2")
         )
         for ast in detected_assets:
             asset_rec = Asset(
@@ -239,8 +247,8 @@ def _trigger_sentinel_analysis(db: Session, claim: FRAClaim, geom_dict: Dict[str
                 asset_type=ast["asset_type"],
                 geometry=json.dumps(ast["geometry"]),
                 area_m2=ast.get("area_m2"),
-                confidence=ast.get("confidence", 0.88),
-                model_name="Copernicus-SAM2"
+                confidence=ast.get("confidence"),
+                model_name=ast.get("model_name")
             )
             db.add(asset_rec)
         db.commit()
@@ -376,7 +384,13 @@ async def upload_geospatial_file(
         if not target_claim:
             raise HTTPException(status_code=404, detail="Specified target FRA claim not found")
 
-        first_geom = features[0]["geometry"]
+        matching_features = [
+            feature for feature in features
+            if str(feature.get("properties", {}).get("record_id", "")).strip() == target_claim.claim_id
+            or str(feature.get("properties", {}).get("claim_id", "")).strip() == target_claim.claim_id
+        ]
+        source_features = matching_features or features[:1]
+        first_geom = mapping(unary_union([shape(feature["geometry"]) for feature in source_features]))
         try:
             geo_proc = validate_and_process_geometry(first_geom, claimed_area_hectares=target_claim.area_claimed)
             existing_geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == target_claim.id).first()
