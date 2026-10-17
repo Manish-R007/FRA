@@ -121,8 +121,14 @@ def seed_system_essentials(db: Session = None):
 
         # 2. Seed Schemes
         print("2. Initializing Government Welfare Schemes Catalog...")
+        scheme_aliases = {
+            "PM-KISAN": "Pradhan Mantri Kisan Samman Nidhi (PM-KISAN)",
+            "PMKSY": "Pradhan Mantri Krishi Sinchayee Yojana (PMKSY - Per Drop More Crop)",
+        }
         for s_data in SCHEMES_DATA:
             existing_scheme = db.query(Scheme).filter(Scheme.code == s_data["code"]).first()
+            if existing_scheme is None:
+                existing_scheme = db.query(Scheme).filter(Scheme.name == scheme_aliases.get(s_data["code"], s_data["name"])).first()
             if not existing_scheme:
                 scheme = Scheme(
                     name=s_data["name"],

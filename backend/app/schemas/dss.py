@@ -22,6 +22,10 @@ class DSSChatRequest(BaseModel):
     scheme_code: Optional[str] = None
     village: Optional[str] = None
     district: Optional[str] = None
+    conversation_id: Optional[str] = Field(default=None, max_length=80)
+
+    class Config:
+        extra = "allow"
 
 class RAGCitation(BaseModel):
     document_name: str
@@ -30,6 +34,7 @@ class RAGCitation(BaseModel):
     section_title: Optional[str] = None
     excerpt: str
     similarity_score: float
+    source_url: Optional[str] = None
 
 class SatelliteTelemetry(BaseModel):
     crop_pct: Optional[float] = None
@@ -69,10 +74,10 @@ class VillageConvergenceSummary(BaseModel):
     total_claims: int
     approved_claims: int
     total_fra_area_hectares: float
-    mean_forest_pct: float
-    mean_crop_pct: float
-    mean_water_pct: float
-    mean_building_pct: float
+    mean_forest_pct: Optional[float] = None
+    mean_crop_pct: Optional[float] = None
+    mean_water_pct: Optional[float] = None
+    mean_building_pct: Optional[float] = None
     priority_level: str  # HIGH, MEDIUM, LOW
     key_interventions_needed: List[str]
     recommended_schemes: List[str]

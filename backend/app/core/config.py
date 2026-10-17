@@ -30,6 +30,16 @@ class Settings(BaseSettings):
     GROQ_API_KEY: Optional[str] = os.getenv("GROQ_API_KEY", None)
     GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY", None)
+    # LangChain + Chroma DSS knowledge base
+    DSS_CHROMA_DIR: str = os.getenv("DSS_CHROMA_DIR", os.path.join(os.getcwd(), "uploads", "chroma"))
+    DSS_CHROMA_COLLECTION: str = os.getenv("DSS_CHROMA_COLLECTION", "fra_policy_documents")
+    DSS_EMBEDDING_MODEL: str = os.getenv("DSS_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    DSS_EMBEDDING_DEVICE: str = os.getenv("DSS_EMBEDDING_DEVICE", "cpu")
+    HF_HOME: str = os.getenv("HF_HOME", os.path.join(os.getcwd(), "uploads", "huggingface"))
+    # Download the free Hugging Face model on first use, then reuse the persistent cache.
+    DSS_EMBEDDINGS_LOCAL_ONLY: bool = os.getenv("DSS_EMBEDDINGS_LOCAL_ONLY", "false").lower() in ("1", "true", "yes")
+    DSS_RAG_TOP_K: int = int(os.getenv("DSS_RAG_TOP_K", "4"))
+    OCR_LANGUAGES: str = os.getenv("OCR_LANGUAGES", "eng+hin+kan+ori")
     
     # Copernicus Sentinel Hub (Copernicus Data Space Ecosystem - CDSE)
     SENTINEL_HUB_CLIENT_ID: Optional[str] = os.getenv("SENTINEL_HUB_CLIENT_ID", None)
@@ -62,3 +72,6 @@ settings = Settings()
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 os.makedirs(settings.PROCESSED_DIR, exist_ok=True)
 os.makedirs(settings.SATELLITE_DIR, exist_ok=True)
+os.makedirs(settings.DSS_CHROMA_DIR, exist_ok=True)
+os.environ["HF_HOME"] = settings.HF_HOME
+os.makedirs(settings.HF_HOME, exist_ok=True)

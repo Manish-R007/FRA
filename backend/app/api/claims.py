@@ -1,4 +1,5 @@
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -16,6 +17,22 @@ from app.services.audit_service import record_audit
 from app.services.gis_service import validate_and_process_geometry
 
 router = APIRouter(prefix="/claims", tags=["FRA Claims"])
+logger = logging.getLogger(__name__)
+
+
+def _refresh_claim_scheme_assessments(db: Session, claim: FRAClaim) -> None:
+    analysis = db.query(SatelliteAnalysis).filter(
+        SatelliteAnalysis.claim_id == claim.id,
+        SatelliteAnalysis.processing_status == "COMPLETED",
+    ).order_by(SatelliteAnalysis.id.desc()).first()
+    geometry = db.query(FRAGeometry).filter(FRAGeometry.claim_id == claim.id).first()
+    if analysis and geometry and geometry.geometry:
+        from app.services.dss_service import run_dss_for_claim
+        try:
+            run_dss_for_claim(db, claim.id)
+        except Exception:
+            db.rollback()
+            logger.exception("Unable to refresh DSS recommendations for claim %s", claim.id)
 
 @router.get("", response_model=List[FRAClaimResponse])
 def get_claims(
@@ -143,6 +160,7 @@ def update_claim(
 
     db.commit()
     db.refresh(claim)
+    _refresh_claim_scheme_assessments(db, claim)
 
     record_audit(db, action="UPDATE_CLAIM", entity="FRAClaim", entity_id=str(claim.id), user_id=current_user.id, old_value=old_data, new_value=update_dict)
 
@@ -178,6 +196,7 @@ def update_claim_status(
 
     db.commit()
     db.refresh(claim)
+    _refresh_claim_scheme_assessments(db, claim)
 
     record_audit(db, action="CHANGE_CLAIM_STATUS", entity="FRAClaim", entity_id=str(claim.id), user_id=current_user.id, old_value={"status": old_status}, new_value={"status": new_status})
 

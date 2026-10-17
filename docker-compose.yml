@@ -34,6 +34,16 @@ services:
     environment:
       - DATABASE_URL=postgresql://fra_user:fra_password_2025@postgres:5432/fra_atlas
       - SECRET_KEY=super-secret-fra-atlas-key-2025-ministry-of-tribal-affairs-secure-sha256
+      - DSS_CHROMA_DIR=/app/uploads/chroma
+      - DSS_CHROMA_COLLECTION=fra_policy_documents
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-120b}
+      - DSS_EMBEDDING_MODEL=${DSS_EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - DSS_EMBEDDING_DEVICE=${DSS_EMBEDDING_DEVICE:-cpu}
+      - DSS_EMBEDDINGS_LOCAL_ONLY=${DSS_EMBEDDINGS_LOCAL_ONLY:-false}
+      - HF_HOME=/app/uploads/huggingface
+      - OCR_LANGUAGES=${OCR_LANGUAGES:-eng+hin+kan+ori}
+      - OCR_LANGUAGES=${OCR_LANGUAGES:-eng+hin+kan+ori}
     ports:
       - "8000:8000"
     volumes:

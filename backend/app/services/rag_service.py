@@ -1,12 +1,22 @@
 import os
 import json
 import math
+import hashlib
 import numpy as np
 from typing import List, Dict, Any, Optional
 from pypdf import PdfReader
 from sqlalchemy.orm import Session
 from app.models.dss import DSSDocument, DSSChunk
 from app.schemas.dss import RAGCitation
+from app.core.config import settings
+from app.services.langchain_workflow import (
+    delete_document_chunks,
+    retrieve_policy_documents,
+    split_policy_pages,
+    upsert_documents,
+)
+
+_legacy_chroma_synced = False
 
 def compute_text_embedding(text: str, dim: int = 64) -> List[float]:
     """
@@ -17,7 +27,7 @@ def compute_text_embedding(text: str, dim: int = 64) -> List[float]:
     vec = np.zeros(dim, dtype=np.float32)
     words = text.lower().split()
     for word in words:
-        h = abs(hash(word))
+        h = int.from_bytes(hashlib.blake2b(word.encode("utf-8"), digest_size=8).digest(), "big")
         idx = h % dim
         sign = 1.0 if (h // dim) % 2 == 0 else -1.0
         vec[idx] += sign * (1.0 / (1.0 + math.log(1 + len(word))))
@@ -25,7 +35,7 @@ def compute_text_embedding(text: str, dim: int = 64) -> List[float]:
     # Add character n-grams (3-grams) for robust morphological matching
     for i in range(len(text) - 3):
         tri = text[i:i+3].lower()
-        h = abs(hash(tri))
+        h = int.from_bytes(hashlib.blake2b(tri.encode("utf-8"), digest_size=8).digest(), "big")
         idx = h % dim
         vec[idx] += 0.3 * (1.0 if (h // dim) % 2 == 0 else -1.0)
         
@@ -58,47 +68,82 @@ def process_and_index_pdf(
     Extracts text per page, chunks with overlap, generates embeddings,
     and stores chunks in the database for RAG retrieval.
     """
-    doc = DSSDocument(
-        name=document_name,
-        file_url=file_path,
-        document_type=document_type,
-        scheme_code=scheme_code
-    )
-    db.add(doc)
+    reader = PdfReader(file_path)
+    pages = [(page.extract_text() or "", page_idx + 1) for page_idx, page in enumerate(reader.pages)]
+    existing = db.query(DSSDocument).filter(DSSDocument.name == document_name,
+                                             DSSDocument.scheme_code == scheme_code).first()
+    if existing:
+        doc = existing
+        old_chunks = db.query(DSSChunk).filter(DSSChunk.document_id == doc.id).all()
+        delete_document_chunks([f"dss-chunk-{chunk.id}" for chunk in old_chunks])
+        db.query(DSSChunk).filter(DSSChunk.document_id == doc.id).delete(synchronize_session=False)
+        doc.file_url = file_path
+        doc.document_type = document_type
+    else:
+        doc = DSSDocument(name=document_name, file_url=file_path, document_type=document_type, scheme_code=scheme_code)
+        db.add(doc)
+        db.flush()
+
+    relative_path = os.path.relpath(file_path, settings.UPLOAD_DIR).replace("\\", "/")
+    source_url = f"/uploads/{relative_path}" if not relative_path.startswith("../") else None
+    metadata = {"document_id": doc.id, "document_name": document_name, "document_type": document_type}
+    if source_url:
+        metadata["source_url"] = source_url
+    if scheme_code:
+        metadata["scheme_code"] = scheme_code
+    vector_docs = split_policy_pages(pages, metadata)
+    sql_chunks = []
+    for vector_doc in vector_docs:
+        chunk = DSSChunk(
+            document_id=doc.id,
+            chunk_text=vector_doc.page_content,
+            page_number=int(vector_doc.metadata["page_number"]),
+            section_title=f"Page {vector_doc.metadata['page_number']}",
+            embedding=json.dumps(compute_text_embedding(vector_doc.page_content)),
+        )
+        db.add(chunk)
+        sql_chunks.append(chunk)
+    db.flush()
+    upsert_documents(vector_docs, [f"dss-chunk-{chunk.id}" for chunk in sql_chunks])
     db.commit()
     db.refresh(doc)
-
-    reader = PdfReader(file_path)
-    chunk_size = 400
-    overlap = 80
-
-    for page_idx, page in enumerate(reader.pages):
-        page_text = page.extract_text() or ""
-        page_num = page_idx + 1
-        
-        # Split page into overlapping chunks
-        start = 0
-        while start < len(page_text):
-            end = min(start + chunk_size, len(page_text))
-            chunk_content = page_text[start:end].strip()
-            
-            if len(chunk_content) > 30:
-                emb = compute_text_embedding(chunk_content)
-                dss_chunk = DSSChunk(
-                    document_id=doc.id,
-                    chunk_text=chunk_content,
-                    page_number=page_num,
-                    section_title=f"Page {page_num} Section",
-                    embedding=json.dumps(emb)
-                )
-                db.add(dss_chunk)
-                
-            start += (chunk_size - overlap)
-            if start >= len(page_text):
-                break
-
-    db.commit()
     return doc
+
+
+def delete_policy_document(db: Session, document_id: int) -> bool:
+    doc = db.query(DSSDocument).filter(DSSDocument.id == document_id).first()
+    if not doc:
+        return False
+    chunk_ids = [row[0] for row in db.query(DSSChunk.id).filter(DSSChunk.document_id == document_id).all()]
+    delete_document_chunks([f"dss-chunk-{chunk_id}" for chunk_id in chunk_ids])
+    db.query(DSSChunk).filter(DSSChunk.document_id == document_id).delete(synchronize_session=False)
+    db.delete(doc)
+    db.commit()
+    return True
+
+
+def _sync_legacy_sql_chunks(db: Session) -> None:
+    """One-time migration for policy chunks seeded before Chroma was introduced."""
+    global _legacy_chroma_synced
+    if _legacy_chroma_synced:
+        return
+    from app.services.langchain_workflow import existing_chroma_ids
+    known_ids = existing_chroma_ids()
+    rows = db.query(DSSChunk, DSSDocument).join(DSSDocument, DSSChunk.document_id == DSSDocument.id).all()
+    documents, ids = [], []
+    for chunk, doc in rows:
+        vector_id = f"dss-chunk-{chunk.id}"
+        if vector_id in known_ids:
+            continue
+        metadata = {"document_id": doc.id, "document_name": doc.name, "document_type": doc.document_type,
+                    "source_url": doc.file_url, "page_number": chunk.page_number}
+        if doc.scheme_code:
+            metadata["scheme_code"] = doc.scheme_code
+        from langchain_core.documents import Document
+        documents.append(Document(page_content=chunk.chunk_text, metadata=metadata))
+        ids.append(vector_id)
+    upsert_documents(documents, ids)
+    _legacy_chroma_synced = True
 
 def search_relevant_policy_chunks(
     db: Session,
@@ -110,6 +155,26 @@ def search_relevant_policy_chunks(
     Retrieves the most semantically relevant policy document chunks
     with exact document name, page number, and text excerpt.
     """
+    try:
+        _sync_legacy_sql_chunks(db)
+        matches = retrieve_policy_documents(query, top_k=top_k, scheme_code=scheme_code_filter)
+        citations = []
+        for document, score in matches:
+            metadata = document.metadata or {}
+            citations.append(RAGCitation(
+                document_name=metadata.get("document_name", "Approved policy document"),
+                scheme_code=metadata.get("scheme_code"),
+                page_number=int(metadata.get("page_number", 1)),
+                section_title=f"Page {metadata.get('page_number', 1)}",
+                excerpt=document.page_content,
+                similarity_score=round(float(score), 3),
+                source_url=metadata.get("source_url"),
+            ))
+        return citations
+    except Exception:
+        # Preserve search availability while dependencies/model downloads are being configured.
+        pass
+
     query_emb = compute_text_embedding(query)
     
     query_obj = db.query(DSSChunk, DSSDocument).join(DSSDocument, DSSChunk.document_id == DSSDocument.id)

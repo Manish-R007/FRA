@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
-from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats, sentinel
+from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats, sentinel, coverage
 from app.models.user import User
 from app.services.sentinel_hub_service import LiveSentinelDataUnavailable
 
@@ -60,6 +60,7 @@ app.include_router(schemes.router, prefix=settings.API_V1_STR)
 app.include_router(dss.router, prefix=settings.API_V1_STR)
 app.include_router(audit.router, prefix=settings.API_V1_STR)
 app.include_router(stats.router, prefix=settings.API_V1_STR)
+app.include_router(coverage.router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 def startup_event():

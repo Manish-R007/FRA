@@ -16,8 +16,8 @@ The system digitizes FRA documents, manages Individual (IFR), Community (CR), an
 ## 🏛️ Key Architectural Pillars
 
 ### 1. Document OCR & Anti-Hallucination LLM Extraction
-- Multi-format ingestion (`.pdf`, `.png`, `.jpg`, `.jpeg`).
-- Digital PDF stream parser and adaptive grayscale/contrast/sharpening preprocessing with **Tesseract OCR** returning token confidences.
+- Multi-format ingestion (`.pdf`, `.png`, `.jpg`, `.jpeg`) with configurable `OCR_LANGUAGES` (default `eng+hin+kan+ori`: English, Hindi, Kannada, Odia).
+- Digital PDF text extraction and scanned PDF/image OCR with **Tesseract** for English, Hindi, Kannada, and Odia; OCR labels feed multilingual FRA field extraction while names are preserved in their original script.
 - LLM structured extraction converting raw text into strict JSON without inventing missing fields (`null` for unknown).
 - **Split-Screen Human Verification Workstation** allowing officers to review, edit, confirm, or reject claims with cryptographic audit trails.
 
@@ -48,7 +48,8 @@ The system digitizes FRA documents, manages Individual (IFR), Community (CR), an
   - **VDVY**: CFR/CR rights or $>30\%$ forest canopy $\to$ Van Dhan Vikas Kendra cluster grant.
   - **MGNREGA-FRA**: 150 days guaranteed wage labor + ₹2,00,000 land development grant.
   - **JJM**: Household tap water connections for tribal habitations.
-- **RAG Vector Search**: Dense embeddings with cosine similarity retrieving official policy document quotes and page numbers for statutory justification.
+- **RAG Vector Search**: LangChain splits policy PDFs into page-aware overlapping chunks, embeds them with the free Hugging Face `sentence-transformers/all-MiniLM-L6-v2` model, and persists vectors in ChromaDB for policy citations.
+- **LangChain DSS Workflow**: The configured Groq chat model can call authenticated, role-scoped DSS tools for live claim statistics, scheme coverage, and village prioritization. Policy context is retrieved from ChromaDB before the LLM response.
 - **Village Convergence Prioritization**: District and Block heatmap ranking villages by priority (`HIGH`, `MEDIUM`, `LOW`).
 
 ### 6. Cryptographic Audit Trail (SHA-256 Hash Chain)
@@ -98,6 +99,24 @@ uvicorn app.main:app --reload --port 8000
 ```
 - API Documentation: [http://localhost:8000/docs](http://localhost:8000/docs)
 - Health Endpoint: [http://localhost:8000/health](http://localhost:8000/health)
+
+#### DSS embeddings and ChromaDB
+
+The free local embedding model downloads from Hugging Face on first use and is cached under `backend/uploads/huggingface` (`/app/uploads/huggingface` in Docker). ChromaDB stores its persistent collection under `backend/uploads/chroma` (`/app/uploads/chroma` in Docker). Keep `backend/uploads` between restarts so the model and indexed vectors remain available. The embedding model requires no API key; chat generation uses the configured Groq API.
+
+Optional settings in `backend/.env` (Docker reads the corresponding values from the project `.env`):
+
+```env
+DSS_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+DSS_EMBEDDING_DEVICE=cpu
+DSS_EMBEDDINGS_LOCAL_ONLY=false
+DSS_CHROMA_DIR=./uploads/chroma
+DSS_CHROMA_COLLECTION=fra_policy_documents
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+For offline operation, download/cache the model first, then set `DSS_EMBEDDINGS_LOCAL_ONLY=true`.
 
 ### Running Backend Tests
 ```bash

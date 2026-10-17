@@ -66,6 +66,12 @@ async def upload_document(
     doc.ocr_text = ocr_res.get("text", "")
     doc.ocr_confidence = ocr_res.get("confidence", 0.85)
 
+    if ocr_res.get("error"):
+        raise HTTPException(
+            status_code=503,
+            detail=f"Multilingual OCR could not run: {ocr_res['error']}. Install Tesseract language data for {settings.OCR_LANGUAGES} and Poppler for scanned PDFs.",
+        )
+
     # 5. Perform Structured LLM Extraction
     structured = await extract_structured_data(doc.ocr_text)
 

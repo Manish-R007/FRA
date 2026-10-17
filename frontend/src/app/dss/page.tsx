@@ -217,6 +217,14 @@ function DSSChatComponent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("query") || "";
   const initialClaimId = searchParams.get("claim_id") ? Number(searchParams.get("claim_id")) : null;
+  const [conversationId, setConversationId] = useState("");
+
+  useEffect(() => {
+    const key = "fra_atlas_dss_conversation";
+    let id = sessionStorage.getItem(key);
+    if (!id) { id = crypto.randomUUID(); sessionStorage.setItem(key, id); }
+    setConversationId(id);
+  }, []);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -292,7 +300,8 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
         query: textToSend,
         messages: newMessages,
         claim_id: claimIdOverride !== undefined ? claimIdOverride : (selectedClaimId || undefined),
-        scheme_code: schemeCodeOverride
+        scheme_code: schemeCodeOverride,
+        conversation_id: conversationId || undefined,
       };
 
       const res = await api.chatDSS(chatReq);
@@ -316,6 +325,9 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
   };
 
   const handleClearChat = () => {
+    const freshId = crypto.randomUUID();
+    sessionStorage.setItem("fra_atlas_dss_conversation", freshId);
+    setConversationId(freshId);
     setMessages([
       {
         role: "assistant",
@@ -330,7 +342,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
   const activeClaim = claimsList.find(c => c.id === selectedClaimId);
 
   return (
-    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 lg:p-8 space-y-8 page-enter">
+    <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-7 px-4 py-7 sm:px-6 lg:px-8 page-enter">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="space-y-1">
@@ -342,7 +354,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-white tracking-tight">DSS AI Conversational Assistant</h1>
+                <h1 className="font-[Manrope] text-2xl font-bold tracking-tight text-[#203b2b]">Decision support</h1>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono font-semibold flex items-center gap-1">
                   <Zap className="w-3 h-3" /> Groq Real-Time LLM + RAG
                 </span>
@@ -740,7 +752,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                   <h3 className="text-xs font-bold text-white">Grounded Policy Citations</h3>
                 </div>
                 <span className="text-[10px] text-slate-500 font-mono">
-                  {activeResponse.citations.length} Official PDFs
+                  {activeResponse.citations.length} policy sources
                 </span>
               </div>
 
@@ -752,6 +764,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                       <span className="text-amber-400 font-mono text-[10px] shrink-0">Page {c.page_number}</span>
                     </div>
                     <p className="text-[10px] text-slate-400 italic line-clamp-3">&quot;{c.excerpt}&quot;</p>
+                    {c.source_url && <a href={c.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-emerald-700 hover:underline"><ExternalLink className="h-3 w-3" />Open source</a>}
                   </div>
                 ))}
               </div>
@@ -808,9 +821,9 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                         <span className="text-emerald-400 font-bold">{v.approved_claims}</span> / {v.total_claims}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-slate-300">{v.total_fra_area_hectares} Ha</td>
-                      <td className="py-3.5 px-4 font-mono text-emerald-400">{v.mean_forest_pct}%</td>
-                      <td className="py-3.5 px-4 font-mono text-lime-400">{v.mean_crop_pct}%</td>
-                      <td className="py-3.5 px-4 font-mono text-blue-400">{v.mean_water_pct}%</td>
+                      <td className="py-3.5 px-4 font-mono text-emerald-400">{v.mean_forest_pct == null ? "Unavailable" : `${v.mean_forest_pct}%`}</td>
+                      <td className="py-3.5 px-4 font-mono text-lime-400">{v.mean_crop_pct == null ? "Unavailable" : `${v.mean_crop_pct}%`}</td>
+                      <td className="py-3.5 px-4 font-mono text-blue-400">{v.mean_water_pct == null ? "Unavailable" : `${v.mean_water_pct}%`}</td>
                       <td className="py-3.5 px-4">
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold ${getPriorityBadgeColor(v.priority_level)}`}>
                           {v.priority_level}
@@ -827,7 +840,7 @@ I am your **AI-Powered Policy & Spatial Advisor**, directly connected to **Coper
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <button
-                          onClick={() => handleSendQuery(`Provide a detailed DSS convergence assessment for village ${v.village} in ${v.district} district. Explain why it is rated ${v.priority_level} priority based on its ${v.mean_forest_pct}% forest canopy, ${v.mean_crop_pct}% crop cover, and ${v.mean_water_pct}% water cover.`)}
+                          onClick={() => handleSendQuery(`Provide a detailed DSS convergence assessment for village ${v.village} in ${v.district} district. Explain why it is rated ${v.priority_level} priority using the available recorded village indicators.`)}
                           className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-emerald-600/30 text-emerald-400 hover:text-emerald-300 border border-slate-700 text-[11px] font-semibold flex items-center gap-1 shrink-0 ml-auto transition-all cursor-pointer"
                         >
                           <Bot className="w-3.5 h-3.5" />

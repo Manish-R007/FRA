@@ -14,6 +14,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",
     "clsx": "^2.1.1",
+    "framer-motion": "^14.3.0",
     "lucide-react": "^0.468.0",
     "maplibre-gl": "^6.6.0",
     "next": "^15.1.0",

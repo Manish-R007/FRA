@@ -279,7 +279,7 @@ export default function ClaimDetailPage() {
   })) || [];
 
   return (
-    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 pb-16 page-enter">
+    <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-7 px-4 py-7 sm:px-6 lg:px-8 page-enter">
       {/* Header Banner */}
       <div className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">

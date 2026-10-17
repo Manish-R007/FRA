@@ -242,6 +242,12 @@ export const api = {
     const qs = district ? `?district=${encodeURIComponent(district)}` : "";
     return fetchWithAuth(`/dss/villages/convergence${qs}`);
   },
+  getCoverageMonitoring: async (params: Record<string, string> = {}): Promise<any> => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => { if (value) query.set(key, value); });
+    const search = query.toString();
+    return fetchWithAuth(`/coverage/monitoring${search ? `?${search}` : ""}`);
+  },
 
   // Audit
   getAuditLogs: async (): Promise<AuditLog[]> => {

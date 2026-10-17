@@ -1,5 +1,5 @@
 # pyrefly: ignore [missing-import]
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean, UniqueConstraint
 from datetime import datetime, timezone
 from app.core.database import Base
 
@@ -31,3 +31,20 @@ class SchemeRecommendation(Base):
     evidence = Column(Text, nullable=True)  # RAG citation: Scheme Document Name, Page X, text excerpt
     citation_page = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class SchemeCoverage(Base):
+    """Recorded scheme outcomes. Missing rows mean unknown, never not covered."""
+    __tablename__ = "scheme_coverage"
+    __table_args__ = (UniqueConstraint("claim_id", "scheme_id", name="uq_scheme_coverage_claim_scheme"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    claim_id = Column(Integer, ForeignKey("fra_claims.id"), nullable=False, index=True)
+    scheme_id = Column(Integer, ForeignKey("schemes.id"), nullable=False, index=True)
+    eligibility_status = Column(String(30), nullable=False, default="UNKNOWN")
+    enrollment_status = Column(String(30), nullable=False, default="UNKNOWN")
+    coverage_status = Column(String(30), nullable=False, default="UNKNOWN")
+    benefit_information = Column(Text, nullable=True)
+    source_reference = Column(String(500), nullable=True)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

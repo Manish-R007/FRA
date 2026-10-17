@@ -167,6 +167,7 @@ export interface RAGCitation {
   section_title?: string;
   excerpt: string;
   similarity_score: number;
+  source_url?: string;
 }
 
 export interface DSSChatRequest {
@@ -176,6 +177,7 @@ export interface DSSChatRequest {
   scheme_code?: string;
   village?: string;
   district?: string;
+  conversation_id?: string;
 }
 
 export interface DSSChatResponse {
@@ -218,10 +220,10 @@ export interface VillageConvergence {
   total_claims: number;
   approved_claims: number;
   total_fra_area_hectares: number;
-  mean_forest_pct: number;
-  mean_crop_pct: number;
-  mean_water_pct: number;
-  mean_building_pct: number;
+  mean_forest_pct: number | null;
+  mean_crop_pct: number | null;
+  mean_water_pct: number | null;
+  mean_building_pct: number | null;
   priority_level: "HIGH" | "MEDIUM" | "LOW";
   key_interventions_needed: string[];
   recommended_schemes: string[];

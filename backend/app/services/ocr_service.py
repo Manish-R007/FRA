@@ -3,6 +3,7 @@ import re
 from typing import Dict, Any, Tuple
 from PIL import Image, ImageEnhance, ImageFilter
 from pypdf import PdfReader
+from app.core.config import settings
 
 try:
     import pytesseract
@@ -63,25 +64,56 @@ def perform_ocr(file_path: str) -> Dict[str, Any]:
                 "method": "PDF_DIGITAL_EXTRACTION"
             }
             
-    # 2. Handle Images or scanned PDF pages
+    # 2. Handle images or scanned PDF pages, OCRing each PDF page independently.
     if TESSERACT_AVAILABLE:
         try:
-            processed_img = preprocess_image(file_path)
-            # Run Tesseract with data to compute mean confidence
-            data = pytesseract.image_to_data(processed_img, output_type=pytesseract.Output.DICT)
-            
-            confidences = [int(c) for c in data.get('conf', []) if c != '-1' and int(c) > 0]
-            mean_conf = (sum(confidences) / len(confidences) / 100.0) if confidences else 0.85
-            
-            text = pytesseract.image_to_string(processed_img)
+            from pdf2image import convert_from_path
+
+            if ext == ".pdf":
+                images = convert_from_path(file_path, dpi=250)
+            else:
+                images = [Image.open(file_path)]
+
+            language = settings.OCR_LANGUAGES.replace(",", "+").replace(" ", "")
+            available = set(pytesseract.get_languages(config=""))
+            requested = [lang for lang in language.split("+") if lang]
+            missing = [lang for lang in requested if lang not in available]
+            if missing:
+                raise RuntimeError(f"Tesseract language data missing: {', '.join(missing)}")
+
+            page_texts, confidences = [], []
+            for page_number, page_image in enumerate(images, start=1):
+                processed_img = page_image.convert("L")
+                processed_img = ImageEnhance.Contrast(processed_img).enhance(2.0).filter(ImageFilter.SHARPEN)
+                data = pytesseract.image_to_data(
+                    processed_img,
+                    lang=language,
+                    output_type=pytesseract.Output.DICT,
+                )
+                confidences.extend(
+                    int(value) for value in data.get("conf", [])
+                    if str(value) not in ("-1", "") and int(value) > 0
+                )
+                page_text = pytesseract.image_to_string(processed_img, lang=language).strip()
+                if page_text:
+                    page_texts.append(f"--- PAGE {page_number} ---\n{page_text}" if ext == ".pdf" else page_text)
+
+            text = "\n\n".join(page_texts)
+            mean_conf = sum(confidences) / len(confidences) / 100.0 if confidences else 0.0
             return {
-                "text": text.strip(),
+                "text": text,
                 "confidence": round(mean_conf, 2),
-                "method": "TESSERACT_OCR"
+                "method": "TESSERACT_OCR",
+                "languages": requested,
             }
         except Exception as e:
-            # Fallback if tesseract binary is not on PATH
-            pass
+            return {
+                "text": "",
+                "confidence": 0.0,
+                "method": "OCR_UNAVAILABLE",
+                "error": str(e),
+                "languages": settings.OCR_LANGUAGES.split("+"),
+            }
             
     # 3. Fallback Parser for document text scanning
     # If the file contains readable text bytes or is a demo patta document

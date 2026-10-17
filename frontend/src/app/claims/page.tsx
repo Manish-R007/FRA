@@ -351,12 +351,12 @@ export default function ClaimsRegistryPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-var(--header-height))] bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 space-y-6 page-enter">
+    <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-6 px-4 py-7 sm:px-6 lg:px-8 page-enter">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">FRA Claims Registry</h1>
+            <h1 className="font-[Manrope] text-2xl font-bold tracking-tight text-[#203b2b]">FRA claims</h1>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
               {claims.length} Records
             </span>
