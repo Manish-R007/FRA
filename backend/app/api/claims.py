@@ -15,6 +15,7 @@ from app.models.audit import Notification
 from app.schemas.claim import FRAClaimCreate, FRAClaimUpdate, FRAClaimResponse
 from app.services.audit_service import record_audit
 from app.services.gis_service import validate_and_process_geometry
+from app.services.state_normalizer import normalize_state_name
 
 router = APIRouter(prefix="/claims", tags=["FRA Claims"])
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def get_claims(
     if village:
         query = query.filter(FRAClaim.village == village)
     if state:
-        query = query.filter(FRAClaim.state == state)
+        query = query.filter(FRAClaim.state == normalize_state_name(state))
     if search:
         search_fmt = f"%{search}%"
         query = query.filter(

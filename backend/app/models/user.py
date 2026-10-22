@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from datetime import datetime, timezone
 from app.core.database import Base
+from app.services.state_normalizer import normalize_state_name
+from sqlalchemy.orm import validates
 
 class User(Base):
     __tablename__ = "users"
@@ -16,3 +18,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    @validates("state")
+    def canonicalize_state(self, _key, value):
+        return normalize_state_name(value)

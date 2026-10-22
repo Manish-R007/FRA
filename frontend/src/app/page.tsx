@@ -106,10 +106,10 @@ export default function HomePage() {
               <Trees size={14} /> Forest Rights Act · 2006
             </div>
             <h1 className="mt-7 max-w-4xl font-[Manrope] text-4xl font-bold leading-[1.06] tracking-[-0.045em] text-[#f3f6ef] drop-shadow-[0_2px_22px_rgba(0,0,0,0.22)] sm:text-6xl lg:text-[76px] xl:text-[88px]">
-              Rights recognized.<br /><span className="text-[#bdd5b5]">Land understood.</span>
+              Forest rights claims.<br /><span className="text-[#bdd5b5]">Mapped and monitored.</span>
             </h1>
             <motion.p className="mt-6 max-w-2xl text-sm leading-7 text-emerald-50/75 sm:text-base" initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.2 }}>
-              FRA Atlas brings claim records, mapped parcels, satellite observations and scheme assessments into one clear workspace for informed administration and community development.
+              Manage Individual, Community and Community Forest Resource claims, review mapped parcels and satellite observations, and monitor welfare scheme assessments in one workspace.
             </motion.p>
             <motion.div className="mt-8 flex flex-wrap gap-3" initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.34 }}>
               <Link href="/atlas" className="group inline-flex items-center gap-2.5 rounded-xl bg-[#edf3e8] px-5 py-3 text-sm font-semibold text-[#193c2b] shadow-lg shadow-black/10 transition hover:bg-white">

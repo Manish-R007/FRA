@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.core.database import engine, Base, SessionLocal
 from app.api import auth, claims, documents, geometries, analysis, schemes, dss, audit, stats, sentinel, coverage
 from app.models.user import User
+from app.models.claim import FRAClaim
+from app.services.state_normalizer import normalize_state_name
 from app.services.sentinel_hub_service import LiveSentinelDataUnavailable
 
 # Initialize tables
@@ -67,6 +69,14 @@ def startup_event():
     """Checks database state on startup and initializes system essentials (Users, Schemes, RAG docs) if clean."""
     db = SessionLocal()
     try:
+        # Canonicalize existing multilingual state values once at startup so
+        # filters, permissions, and SQL groupings use the same state key.
+        for model in (FRAClaim, User):
+            for record in db.query(model).filter(model.state.isnot(None)).yield_per(500):
+                canonical = normalize_state_name(record.state)
+                if canonical != record.state:
+                    record.state = canonical
+        db.commit()
         user_count = db.query(User).count()
         if user_count == 0:
             print("Clean database detected on startup. Initializing system essentials (0 Claims)...")

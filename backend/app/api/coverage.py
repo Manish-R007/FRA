@@ -11,6 +11,7 @@ from app.models.claim import FRAClaim
 from app.models.scheme import Scheme, SchemeCoverage, SchemeRecommendation
 from app.models.user import User
 from app.services.audit_service import record_audit
+from app.services.state_normalizer import normalize_state_name
 
 router = APIRouter(prefix="/coverage", tags=["Scheme Coverage"])
 OFFICER_ROLES = ["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER", "ANALYST"]
@@ -101,6 +102,7 @@ def coverage_summary(state: Optional[str] = None, district: Optional[str] = None
                      block: Optional[str] = None, village: Optional[str] = None,
                      claim_type: Optional[str] = None, scheme_code: Optional[str] = None,
                      db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    state = normalize_state_name(state)
     if claim_type and claim_type not in {"IFR", "CR", "CFR"}:
         raise HTTPException(status_code=422, detail="claim_type must be IFR, CR, or CFR")
     if user.role == "STATE_OFFICER" and state and state != user.state:
@@ -132,6 +134,7 @@ def coverage_monitoring(level: str = "state", state: Optional[str] = None,
                        district: Optional[str] = None, block: Optional[str] = None,
                        db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     """Live location rollups; eligibility comes from DSS assessments, delivery from recorded coverage."""
+    state = normalize_state_name(state)
     if level not in {"state", "district", "village"}:
         raise HTTPException(status_code=422, detail="level must be state, district, or village")
     if user.role == "STATE_OFFICER" and state and state != user.state:
