@@ -39,9 +39,18 @@ async def live_sentinel_unavailable(_: Request, exc: LiveSentinelDataUnavailable
     )
 
 # CORS middleware for frontend access
+default_cors_origins = [
+    "http://localhost:3000",
+    "https://fra-atlas-frontend-ten.vercel.app",
+]
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", ",".join(default_cors_origins)).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins for local dev / production config
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
