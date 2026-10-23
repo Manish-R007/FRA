@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "https://fra-atlas-backend-lrka.onrender.com/api";
+const backendOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Keep production verification/build output separate when a dev server is active.
@@ -8,11 +11,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${apiBaseUrl}/:path*`,
       },
       {
         source: "/uploads/:path*",
-        destination: "http://localhost:8000/uploads/:path*",
+        destination: `${backendOrigin}/uploads/:path*`,
       },
     ];
   },

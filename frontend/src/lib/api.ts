@@ -11,7 +11,7 @@ import {
   User,
 } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://fra-atlas-backend-lrka.onrender.com/api";
 
 async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
   const token = getStoredToken();
