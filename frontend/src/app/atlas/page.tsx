@@ -3,26 +3,29 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import WebGISMap from "@/components/map/WebGISMap";
-import { 
-  Search, 
-  Layers, 
-  Upload, 
-  Filter, 
-  MapPin, 
-  Compass, 
-  Info, 
-  CheckCircle2, 
-  AlertTriangle, 
-  X, 
+import {
+  Search,
+  Layers,
+  Upload,
+  Filter,
+  MapPin,
+  Compass,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  X,
   Plus,
   User,
-  ChevronRight
+  ChevronRight,
+  Map
 } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { api } from "@/lib/api";
 import { FRAClaim } from "@/lib/types";
 
 function AtlasContent() {
   const searchParams = useSearchParams();
+  const shouldReduceMotion = useReducedMotion();
   const initialParamClaim = searchParams.get("claim_id") || searchParams.get("id") || searchParams.get("selected") || null;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,12 +60,12 @@ function AtlasContent() {
     try {
       const claimIdNum = targetClaimId ? parseInt(targetClaimId) : undefined;
       const res = await api.uploadGeospatialFile(file, claimIdNum, "FIELD_SURVEY_UPLOAD");
-      
+
       const newClaimId = res.parcels?.[0]?.claim_id || (claimIdNum ? claimsList.find(c => c.id === claimIdNum)?.claim_id : undefined);
 
       setUploadStatus(`✓ Success! ${res.message || "Boundary geometry uploaded and geodesic area calculated."}`);
       setIsUploading(false);
-      
+
       if (newClaimId) {
         setSelectedClaimId(newClaimId);
       }
@@ -95,12 +98,17 @@ function AtlasContent() {
     : [];
 
   return (
-    <div className="relative w-full h-[calc(100dvh-var(--header-height))] overflow-hidden bg-slate-950">
+    <div className="relative w-full h-[calc(100dvh-var(--header-height))] overflow-hidden bg-[#06140f]">
       {/* Top Search & Filter Bar Overlay */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4">
+      <motion.div
+        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-xl px-4"
+        initial={shouldReduceMotion ? false : { opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
         <div className="relative">
-          <div className="glass-panel-glow p-2 rounded-2xl shadow-2xl flex items-center gap-2 border border-slate-700/60">
-            <Search className="w-4 h-4 text-emerald-400 ml-2 shrink-0" />
+          <div className="glass-panel-glow p-2 rounded-2xl shadow-xl flex items-center gap-2">
+            <Search className="w-4 h-4 text-[#4a9460] ml-2.5 shrink-0" />
             <input
               type="text"
               value={searchQuery}
@@ -110,7 +118,7 @@ function AtlasContent() {
               }}
               onFocus={() => setShowDropdown(true)}
               placeholder="Search by Claim ID, Applicant, or Village..."
-              className="w-full bg-transparent border-none text-xs text-white focus:outline-none placeholder-slate-400"
+              className="w-full bg-transparent border-none text-xs text-[#1a2f23] focus:outline-none placeholder-[#8c9d8f]"
             />
             {searchQuery && (
               <button
@@ -118,52 +126,64 @@ function AtlasContent() {
                   setSearchQuery("");
                   setShowDropdown(false);
                 }}
-                className="text-xs text-slate-400 hover:text-white px-2"
+                className="text-xs text-[#8c9d8f] hover:text-[#3d5a46] px-2 transition-colors"
               >
-                ✕
+                <X size={14} />
               </button>
             )}
-            <button
+            <motion.button
               onClick={() => {
                 setUploadStatus(null);
                 setShowUploadModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow transition-all"
+              className="btn-gold !py-2 !px-3.5 text-xs shrink-0"
+              whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload Boundary</span>
-            </button>
+            </motion.button>
           </div>
 
           {/* Live Search Suggestions Dropdown */}
-          {showDropdown && filteredSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 glass-panel-glow rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-2xl overflow-hidden z-30 divide-y divide-slate-100 dark:divide-slate-800">
-              {filteredSearchResults.map((claim) => (
-                <button
-                  key={claim.id}
-                  onClick={() => {
-                    setSelectedClaimId(claim.claim_id);
-                    setSearchQuery(claim.claim_id);
-                    setShowDropdown(false);
-                  }}
-                  className="w-full px-4 py-2.5 text-left hover:bg-emerald-50/90 dark:hover:bg-slate-800/80 flex items-center justify-between text-xs transition-colors group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
-                    <div>
-                      <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400 block">{claim.claim_id}</span>
-                      <span className="text-[11px] text-slate-600 dark:text-slate-300">{claim.applicant_name} • {claim.village}, {claim.district}</span>
+          <AnimatePresence>
+            {showDropdown && filteredSearchResults.length > 0 && (
+              <motion.div
+                className="absolute top-full left-0 right-0 mt-2 glass-panel-glow rounded-2xl shadow-xl overflow-hidden z-30 divide-y divide-[#f0f1e9]"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.18 }}
+              >
+                {filteredSearchResults.map((claim) => (
+                  <button
+                    key={claim.id}
+                    onClick={() => {
+                      setSelectedClaimId(claim.claim_id);
+                      setSearchQuery(claim.claim_id);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-[#f0f8f1] flex items-center justify-between text-xs transition-colors group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4ede0] text-[#3d7a4f] group-hover:bg-[#d8e6d0] transition-colors">
+                        <MapPin className="w-3.5 h-3.5" />
+                      </span>
+                      <div>
+                        <span className="font-mono font-bold text-[#3d7a4f] block">{claim.claim_id}</span>
+                        <span className="text-[11px] text-[#68806e]">{claim.applicant_name} • {claim.village}, {claim.district}</span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-slate-300 font-mono font-semibold">
-                    {claim.claim_type} Title
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#e4ede0] text-[#3d7a4f] font-mono font-semibold">
+                      {claim.claim_type}
+                    </span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       {/* WebGIS Fullscreen Map */}
       <WebGISMap
@@ -176,90 +196,103 @@ function AtlasContent() {
       />
 
       {/* Upload Boundary Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel-glow p-6 rounded-3xl max-w-md w-full border border-slate-700 space-y-4 animate-in zoom-in-95 duration-150 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                  <Upload className="w-4 h-4" />
+      <AnimatePresence>
+        {showUploadModal && (
+          <motion.div
+            className="fixed inset-0 z-50 fra-modal-backdrop flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="glass-panel-glow p-6 rounded-[1.6rem] max-w-md w-full space-y-4 shadow-2xl"
+              initial={{ scale: 0.95, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.97, opacity: 0, y: 6 }}
+              transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
+            >
+              <div className="flex items-center justify-between border-b border-[#e5ebe5] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="icon-chip">
+                    <Upload className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-base text-[#1a2f23]">Upload Real Parcel Boundary</h3>
+                    <p className="text-xs text-[#68806e]">Attach surveyed GPS polygon or multi-parcel GeoJSON</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-base text-white">Upload Real Parcel Boundary</h3>
-                  <p className="text-xs text-slate-400">Attach surveyed GPS polygon or multi-parcel GeoJSON</p>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="text-[#8c9d8f] hover:text-[#3d5a46] p-1.5 rounded-lg hover:bg-[#f0f1e9] transition-all"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Target Claim Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[#3d5a46]">Assign to Claim (Optional):</label>
+                <select
+                  value={targetClaimId}
+                  onChange={(e) => setTargetClaimId(e.target.value)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-white border border-[#dce6e0] text-xs text-[#1a2f23] focus:outline-none focus:border-[#68b07a]"
+                >
+                  <option value="">Auto-Detect / Multi-Parcel FeatureCollection</option>
+                  {claimsList.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.claim_id} - {c.applicant_name} ({c.village})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="border-2 border-dashed border-[#d5dec9] hover:border-[#8cc99a] rounded-2xl p-6 text-center space-y-2 cursor-pointer transition-colors bg-[#faf9f4]">
+                <MapPin className="w-8 h-8 text-[#4a9460] mx-auto" />
+                <label className="block text-xs font-semibold text-[#1a2f23] cursor-pointer">
+                  Select GeoJSON or KML File
+                  <input
+                    type="file"
+                    accept=".geojson,.json,.kml"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-[11px] text-[#8c9d8f] block">
+                  Supported: .geojson, .json, .kml (WGS84 EPSG:4326)
+                </span>
+              </div>
+
+              {isUploading && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#f0f8f1] border border-[#c5d4b8] text-xs text-[#3d7a4f]">
+                  <div className="w-4 h-4 border-2 border-[#4a9460] border-t-transparent rounded-full animate-spin"></div>
+                  <span>Uploading and computing geodesic area...</span>
                 </div>
+              )}
+
+              {uploadStatus && !isUploading && (
+                <div className={`text-xs p-3 rounded-xl border flex items-start gap-2 ${
+                  uploadStatus.startsWith("✓")
+                    ? "bg-[#f0f8f1] border-[#c5d4b8] text-[#2a4e34]"
+                    : "bg-rose-50 border-rose-200 text-rose-700"
+                }`}>
+                  <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{uploadStatus}</span>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2 border-t border-[#e5ebe5]">
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  className="px-4 py-2 rounded-xl bg-white hover:bg-[#f0f1e9] text-[#3d5a46] border border-[#dce6e0] text-xs font-semibold transition-all"
+                >
+                  Close
+                </button>
               </div>
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Target Claim Selector (Optional) */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-300">Assign to Claim (Optional):</label>
-              <select
-                value={targetClaimId}
-                onChange={(e) => setTargetClaimId(e.target.value)}
-                className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="">Auto-Detect / Multi-Parcel FeatureCollection</option>
-                {claimsList.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.claim_id} - {c.applicant_name} ({c.village})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-2xl p-6 text-center space-y-2 cursor-pointer transition-colors bg-slate-900/40">
-              <MapPin className="w-8 h-8 text-emerald-400 mx-auto" />
-              <label className="block text-xs font-semibold text-slate-200 cursor-pointer">
-                Select GeoJSON or KML File
-                <input
-                  type="file"
-                  accept=".geojson,.json,.kml"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-              <span className="text-[11px] text-slate-500 block">
-                Supported: .geojson, .json, .kml (WGS84 EPSG:4326)
-              </span>
-            </div>
-
-            {isUploading && (
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
-                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
-                <span>Uploading and computing geodesic area...</span>
-              </div>
-            )}
-
-            {uploadStatus && !isUploading && (
-              <div className={`text-xs p-3 rounded-xl border flex items-start gap-2 ${
-                uploadStatus.startsWith("✓") 
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-                  : "bg-rose-500/10 border-rose-500/30 text-rose-300"
-              }`}>
-                <Info className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{uploadStatus}</span>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setShowUploadModal(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -267,10 +300,15 @@ function AtlasContent() {
 export default function AtlasPage() {
   return (
     <Suspense fallback={
-      <div className="w-full h-[calc(100dvh-var(--header-height))] bg-slate-950 flex items-center justify-center text-slate-400">
-        <div className="flex items-center gap-3">
-          <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Loading FRA WebGIS Atlas...</span>
+      <div className="w-full h-[calc(100dvh-var(--header-height))] bg-[#f0f1e9] flex items-center justify-center text-[#68806e]">
+        <div className="flex flex-col items-center gap-3">
+          <span className="icon-chip !h-12 !w-12">
+            <Map className="w-6 h-6" />
+          </span>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-[#4a9460] border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading FRA WebGIS Atlas...</span>
+          </div>
         </div>
       </div>
     }>

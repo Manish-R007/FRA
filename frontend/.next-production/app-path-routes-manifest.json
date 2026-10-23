@@ -1,0 +1,13 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/atlas/page": "/atlas",
+  "/documents/verify/[id]/page": "/documents/verify/[id]",
+  "/claims/[id]/page": "/claims/[id]",
+  "/audit/page": "/audit",
+  "/claims/page": "/claims",
+  "/monitoring/page": "/monitoring",
+  "/page": "/",
+  "/login/page": "/login",
+  "/dss/page": "/dss",
+  "/schemes/page": "/schemes"
+}

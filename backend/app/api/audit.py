@@ -17,7 +17,7 @@ def get_audit_logs(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER"]))
+    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "ANALYST"]))
 ):
     """
     Retrieves immutable cryptographic audit logs forming the SHA-256 hash chain.
@@ -34,7 +34,7 @@ def get_audit_logs(
 @router.get("/verify", response_model=AuditVerificationResult)
 def verify_hash_chain(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "ANALYST"]))
 ):
     """
     Cryptographically verifies the unbroken SHA-256 hash chain across all blocks from genesis.

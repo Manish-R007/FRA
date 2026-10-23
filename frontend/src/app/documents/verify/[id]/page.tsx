@@ -87,7 +87,7 @@ export default function DocumentVerificationPage() {
 
   if (loading || !document) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
+      <div className="min-h-[calc(100vh-var(--header-height))] flex items-center justify-center text-[var(--ink-muted)]">
         <div className="flex items-center gap-3">
           <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           <span>Loading Document Verification Workstation...</span>
@@ -97,7 +97,7 @@ export default function DocumentVerificationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-[calc(100vh-var(--header-height))] text-[var(--ink)] flex flex-col">
       {/* Top Header */}
       <div className="h-14 border-b border-slate-800 bg-slate-900 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">

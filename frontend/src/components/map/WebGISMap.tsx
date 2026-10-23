@@ -423,12 +423,11 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
   const visibleCount = showClaimMarkers ? visibleClaims : visibleParcels;
 
   return <div className={`relative w-full ${height} overflow-hidden bg-slate-950`}>
-    <div ref={containerRef} className="maplibre-container absolute inset-0" aria-label="Copernicus Sentinel-2 WebGIS map" />
+    <div ref={containerRef} className="maplibre-container absolute inset-0" aria-label="FRA WebGIS claim map" />
     <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
       <div className="glass-panel p-3 rounded-xl shadow-xl w-64 text-xs space-y-3">
         <div className="flex items-center justify-between font-semibold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-800 pb-2"><span className="flex items-center gap-1.5"><Layers className="w-4 h-4 text-emerald-500" /> FRA Atlas Layers</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-600 font-mono">{visibleCount} {showClaimMarkers ? "Claims" : "Parcels"}</span></div>
         <div><label className="text-[10px] font-semibold text-slate-500 uppercase">Boundary Category</label><div className="grid grid-cols-3 gap-1 mt-1">{(["ALL", "IFR", "CR", "CFR", "FLAGGED"] as BoundaryFilter[]).map((item) => <button key={item} onClick={() => setActiveLayer(item)} className={`px-2 py-1 rounded-lg text-[11px] font-semibold ${activeLayer === item ? "bg-emerald-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"} ${item === "FLAGGED" ? "col-span-2 border border-rose-300" : ""}`}>{item === "FLAGGED" ? "⚠ Discrepancies" : item}</button>)}</div></div>
-        <div className="space-y-1.5 pt-1 border-t border-slate-200 dark:border-slate-800"><label className="text-[10px] font-semibold text-slate-500 uppercase flex items-center justify-between">Sentinel-2 spectral layers <Sparkles className="w-3 h-3 text-emerald-600" /></label><div className="grid grid-cols-3 gap-1">{([{ id: "none", label: "Vector only" }, { id: "rgb", label: "RGB (B4,B3,B2)" }, { id: "cir", label: "CIR (B8,B4,B3)" }, { id: "ndvi", label: "NDVI (Veg)" }, { id: "ndwi", label: "NDWI (Water)" }, { id: "ndbi", label: "NDBI (Built)" }] as { id: SpectralLayer; label: string }[]).map((item) => <button key={item.id} title={item.label} onClick={() => setActiveIndicesOverlay(item.id)} className={`px-1 py-1 rounded-lg font-mono text-[9px] truncate ${activeIndicesOverlay === item.id ? "bg-emerald-500/20 text-emerald-700 border border-emerald-500/40" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`}>{item.label}</button>)}</div></div>
       </div>
       <div className="glass-panel p-2.5 rounded-xl shadow-lg w-64 text-[11px]"><span className="font-semibold text-slate-500 text-[10px] uppercase">Legend</span><div className="grid grid-cols-2 gap-2 mt-1.5 text-slate-700 dark:text-slate-300"><span>🟩 IFR pin</span><span>🟨 CR pin</span><span>🟪 CFR pin</span><span>🟥 Flagged pin</span></div></div>
     </div>
@@ -489,6 +488,6 @@ export default function WebGISMap({ initialGeometries, selectedClaimId, onSelect
         <Link href={`/claims/${selectedFeature.db_claim_id || selectedFeature.claim_id}`} className="block text-center rounded-xl bg-emerald-600 py-3 text-xs font-semibold text-white">Open Claim Workspace ↗</Link>
       </div>
     )}
-    <div className="absolute bottom-2 right-3 z-10 text-[10px] bg-white/80 dark:bg-slate-900/80 px-2 py-1 rounded text-slate-600">Copernicus Sentinel-2 WebGIS · rendered with MapLibre GL</div>
+    <div className="absolute bottom-2 right-3 z-10 text-[10px] bg-white/80 dark:bg-slate-900/80 px-2 py-1 rounded text-slate-600">FRA WebGIS · rendered with MapLibre GL</div>
   </div>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import {
   FileText,
@@ -353,17 +354,27 @@ export default function ClaimsRegistryPage() {
   return (
     <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-6 px-4 py-7 sm:px-6 lg:px-8 page-enter">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-[Manrope] text-2xl font-bold tracking-tight text-[#203b2b]">FRA claims</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono font-semibold">
-              {claims.length} Records
-            </span>
+      <motion.div
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 fra-page-header"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="icon-chip">
+            <FileText className="w-5 h-5" />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display text-5xl">FRA claims</h1>
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#e4ede0] text-[#3d7a4f] border border-[#c5d4b8] font-mono font-semibold">
+                {claims.length} Records
+              </span>
+            </div>
+            <p className="text-xs text-[#68806e] mt-0.5">
+              Individual (IFR), Community (CR), and Community Forest Resource (CFR) titles under Forest Rights Act 2006.
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Individual (IFR), Community (CR), and Community Forest Resource (CFR) titles under Forest Rights Act 2006.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -372,9 +383,9 @@ export default function ClaimsRegistryPage() {
               setBulkResult(null);
               setShowBulkModal(true);
             }}
-            className="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 hover:text-emerald-700 dark:text-slate-200 dark:hover:text-white border border-slate-200 dark:border-slate-700 hover:border-emerald-300 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
+            className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-[#f0f8f1] text-[#3d5a46] hover:text-[#2a4e34] border border-[#dce6e0] hover:border-[#c5d4b8] text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
           >
-            <Upload className="w-4 h-4 text-emerald-600 dark:text-teal-400" />
+            <Upload className="w-4 h-4 text-[#4a9460]" />
             <span>Bulk Upload GeoJSON</span>
           </button>
 
@@ -382,34 +393,39 @@ export default function ClaimsRegistryPage() {
             <button
               onClick={handlePurgeAllData}
               disabled={purging}
-              className="px-3.5 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
+              className="px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-2 transition-all shadow-sm"
               title="Reset & Purge All Claims Data"
             >
-              <Trash2 className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+              <Trash2 className="w-4 h-4 text-rose-500" />
               <span>{purging ? "Purging..." : "Purge Data"}</span>
             </button>
           )}
 
           <button
             onClick={openNewClaimModal}
-            className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-emerald-950/30 transition-all hover:scale-[1.02]"
+            className="btn-gold text-xs"
           >
             <Plus className="w-4 h-4" />
             <span>Register New FRA Claim</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Filter and Search Toolbar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-4 gap-3"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.08 }}
+      >
         <form onSubmit={handleSearchSubmit} className="md:col-span-2 relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#8c9d8f] absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by Claim ID, Applicant Name, or Survey Number..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-[#dce6e0] text-xs text-[#1a2f23] placeholder-[#aab8ad] focus:outline-none focus:border-[#68b07a]"
           />
         </form>
 
@@ -417,7 +433,7 @@ export default function ClaimsRegistryPage() {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="w-full py-2.5 px-3 rounded-xl bg-white border border-[#dce6e0] text-xs text-[#1a2f23] focus:outline-none focus:border-[#68b07a]"
           >
             <option value="">All Rights Types (IFR / CR / CFR)</option>
             <option value="IFR">IFR - Individual Forest Rights</option>
@@ -430,7 +446,7 @@ export default function ClaimsRegistryPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500"
+            className="w-full py-2.5 px-3 rounded-xl bg-white border border-[#dce6e0] text-xs text-[#1a2f23] focus:outline-none focus:border-[#68b07a]"
           >
             <option value="">All Workflow Statuses</option>
             <option value="APPROVED">APPROVED (Patta Granted)</option>
@@ -441,13 +457,18 @@ export default function ClaimsRegistryPage() {
             <option value="REJECTED">REJECTED</option>
           </select>
         </div>
-      </div>
+      </motion.div>
 
       {/* Claims Data Table */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
+      <motion.div
+        className="glass-panel rounded-[1.4rem] overflow-hidden"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+            <thead className="bg-[#f5f8f2] border-b border-[#e2e5da] text-[#556c60] uppercase text-[10px] tracking-wider font-semibold">
               <tr>
                 <th className="py-3.5 px-4">Claim ID</th>
                 <th className="py-3.5 px-4">Applicant & Relation</th>
@@ -459,7 +480,7 @@ export default function ClaimsRegistryPage() {
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-[#f0f1e9]">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-500">
@@ -502,15 +523,15 @@ export default function ClaimsRegistryPage() {
                 </tr>
               ) : (
                 claims.map((claim) => (
-                  <tr key={claim.id} className="hover:bg-emerald-50/40 dark:hover:bg-slate-900/50 transition-colors group">
-                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                  <tr key={claim.id} className="hover:bg-[#f5f8f2] transition-colors group">
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#3d7a4f]">
                       <Link href={`/claims/${claim.id}`} className="hover:underline flex items-center gap-1">
                         <span>{claim.claim_id}</span>
                       </Link>
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <strong className="block text-slate-900 dark:text-slate-200">{claim.applicant_name}</strong>
+                      <strong className="block text-[#1a2f23]">{claim.applicant_name}</strong>
                       <span className="text-[11px] text-slate-500">
                         {claim.father_or_husband_name ? `S/o ${claim.father_or_husband_name}` : "Gram Sabha Committee"}
                       </span>
@@ -546,7 +567,7 @@ export default function ClaimsRegistryPage() {
                           GIS Polygon
                         </span>
                         <span className={`px-1.5 py-0.5 rounded ${claim.has_analysis ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20" : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500"}`}>
-                          Sentinel-2
+                          Land-cover analysis
                         </span>
                       </div>
                     </td>
@@ -576,22 +597,22 @@ export default function ClaimsRegistryPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       {/* MULTI-MODAL CLAIM INTAKE STUDIO MODAL */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="glass-panel-glow p-6 lg:p-7 rounded-3xl max-w-3xl w-full border border-slate-700 space-y-5 my-8 animate-in zoom-in-95 duration-150 shadow-2xl">
+        <div className="fixed inset-0 z-50 fra-modal-backdrop flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass-panel-glow p-6 lg:p-7 rounded-[1.6rem] max-w-3xl w-full space-y-5 my-8 animate-in shadow-2xl">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+            <div className="flex items-start justify-between border-b border-[#e5ebe5] pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                    <Scan className="w-4 h-4 text-emerald-400" />
+                  <div className="icon-chip !h-8 !w-8">
+                    <Scan className="w-4 h-4 text-[#3d7a4f]" />
                   </div>
-                  <h3 className="font-bold text-lg text-white">FRA Claim AI Registration Studio</h3>
+                  <h3 className="font-bold text-lg text-[#1a2f23]">FRA Claim AI Registration Studio</h3>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-[#68806e] mt-1">
                   Upload official Patta/Application, scan via camera, or enter manually. AI OCR automatically extracts applicant details and verifies scheme eligibility.
                 </p>
               </div>
@@ -600,14 +621,14 @@ export default function ClaimsRegistryPage() {
                   stopCamera();
                   setShowCreateModal(false);
                 }}
-                className="p-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700"
+                className="p-1.5 rounded-xl bg-white border border-[#dce6e0] text-[#8c9d8f] hover:text-[#3d5a46] hover:border-[#c5d4b8] transition-all"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Intake Mode Switcher Tabs */}
-            <div className="grid grid-cols-3 gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <div className="grid grid-cols-3 gap-2 bg-[#f0f1e9] p-1.5 rounded-2xl border border-[#e2e5da]">
               <button
                 type="button"
                 onClick={() => {
@@ -615,8 +636,8 @@ export default function ClaimsRegistryPage() {
                   setIntakeMode("upload");
                 }}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "upload"
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-[#315b3d] to-[#3d7a4f] text-white shadow-md shadow-[#315b3d]/20"
+                    : "text-[#68806e] hover:text-[#3d5a46] hover:bg-white"
                   }`}
               >
                 <UploadCloud className="w-4 h-4" />
@@ -630,8 +651,8 @@ export default function ClaimsRegistryPage() {
                   startCamera();
                 }}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "camera"
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-[#315b3d] to-[#3d7a4f] text-white shadow-md shadow-[#315b3d]/20"
+                    : "text-[#68806e] hover:text-[#3d5a46] hover:bg-white"
                   }`}
               >
                 <Camera className="w-4 h-4" />
@@ -645,8 +666,8 @@ export default function ClaimsRegistryPage() {
                   setIntakeMode("manual");
                 }}
                 className={`py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all ${intakeMode === "manual"
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/50"
-                    : "text-slate-400 hover:text-slate-200"
+                    ? "bg-gradient-to-r from-[#315b3d] to-[#3d7a4f] text-white shadow-md shadow-[#315b3d]/20"
+                    : "text-[#68806e] hover:text-[#3d5a46] hover:bg-white"
                   }`}
               >
                 <FileText className="w-4 h-4" />
@@ -1083,13 +1104,13 @@ export default function ClaimsRegistryPage() {
 
       {/* SUCCESS & INSTANT SCHEME CONVERGENCE MODAL */}
       {showSuccessModal && createdClaim && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel-glow p-6 lg:p-8 rounded-3xl max-w-xl w-full border border-emerald-500/40 space-y-5 animate-in zoom-in-95 duration-150 shadow-2xl">
+        <div className="fixed inset-0 z-50 fra-modal-backdrop flex items-center justify-center p-4">
+          <div className="glass-panel-glow p-6 lg:p-8 rounded-[1.6rem] max-w-xl w-full border-[#c5d4b8] space-y-5 animate-in shadow-2xl">
             <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-xl shadow-emerald-950/60">
+              <div className="w-14 h-14 rounded-3xl bg-gradient-to-br from-[#e4ede0] to-[#d8e6d0] text-[#3d7a4f] flex items-center justify-center mx-auto shadow-lg shadow-[#315b3d]/10">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-white">FRA Claim Registered Successfully!</h3>
+              <h3 className="text-xl font-bold text-[#1a2f23]">FRA Claim Registered Successfully!</h3>
               <p className="text-xs text-slate-300">
                 Claim <strong className="text-emerald-400 font-mono">{createdClaim.claim_id}</strong> for <strong className="text-white">{createdClaim.applicant_name}</strong> is now registered in the Forest Rights Registry.
               </p>
@@ -1176,9 +1197,9 @@ export default function ClaimsRegistryPage() {
 
       {/* BULK GEOJSON / KML UPLOAD MODAL */}
       {showBulkModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel-glow p-6 lg:p-7 rounded-3xl max-w-xl w-full border border-slate-700 space-y-4 animate-in zoom-in-95 duration-150 shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 fra-modal-backdrop flex items-center justify-center p-4">
+          <div className="glass-panel-glow p-6 lg:p-7 rounded-[1.6rem] max-w-xl w-full space-y-4 animate-in shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#e5ebe5] pb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400">
                   <Upload className="w-4 h-4" />

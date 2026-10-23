@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
 import Navbar from "@/components/layout/Navbar";
+import PageTransition from "@/components/layout/PageTransition";
+import ForestAtmosphere from "@/components/layout/ForestAtmosphere";
+import RouteGuard from "@/components/layout/RouteGuard";
 
 export const metadata: Metadata = {
   title: "FRA ATLAS AI | Ministry of Tribal Affairs Decision Support System",
@@ -13,12 +16,35 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="light-ui min-h-screen bg-background text-foreground antialiased selection:bg-emerald-700 selection:text-white">
-        <Navbar />
-        <main className="min-h-[calc(100vh-var(--header-height))] app-surface">
-          {children}
-        </main>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('fra_theme');
+                if (t === 'dawn') {
+                  document.documentElement.classList.add('dawn');
+                  document.documentElement.classList.remove('dark');
+                } else {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('dawn');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
+      <body className="antialiased">
+        <div className="fra-app">
+          <ForestAtmosphere />
+          <Navbar />
+          <main className="relative z-10 min-h-[calc(100vh-var(--header-height))] app-surface">
+            <RouteGuard>
+              <PageTransition>{children}</PageTransition>
+            </RouteGuard>
+          </main>
+        </div>
       </body>
     </html>
   );

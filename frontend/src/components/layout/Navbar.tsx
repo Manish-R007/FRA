@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Award, BarChart3, Bot, ChevronDown, FileText, Layers, Map, Menu, Moon, ShieldCheck, Sun, Trees, X } from "lucide-react";
+import { Activity, BarChart3, Bot, ChevronDown, FileText, Layers, Map, Menu, Moon, ShieldCheck, Sun, Trees, X } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getStoredUser, setAuthSession } from "@/lib/auth";
+import { canAccessPath } from "@/lib/rbac";
 import { User, UserRole } from "@/lib/types";
 
 const ROLE_PRESETS: { role: UserRole; name: string; email: string; desc: string; state?: string }[] = [
@@ -18,73 +20,213 @@ const ROLE_PRESETS: { role: UserRole; name: string; email: string; desc: string;
 
 const NAV_ITEMS = [
   { href: "/", label: "Overview", icon: Activity },
-  { href: "/atlas", label: "Forest atlas", icon: Map },
+  { href: "/atlas", label: "Atlas", icon: Map },
   { href: "/claims", label: "Claims", icon: FileText },
-  { href: "/dss", label: "Decision support", icon: Bot },
+  { href: "/dss", label: "DSS", icon: Bot },
   { href: "/schemes", label: "Schemes", icon: Layers },
-  { href: "/monitoring", label: "Monitoring", icon: BarChart3 },
+  { href: "/monitoring", label: "Monitor", icon: BarChart3 },
   { href: "/audit", label: "Audit", icon: ShieldCheck },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
+  const shouldReduceMotion = useReducedMotion();
   const [user, setUser] = useState<User | null>(null);
   const [roleMenu, setRoleMenu] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [dark, setDark] = useState(false);
+  const [dawn, setDawn] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => { setUser(getStoredUser()); }, []);
+  useEffect(() => {
+    setUser(getStoredUser());
+    const isDawn = document.documentElement.classList.contains("dawn") || localStorage.getItem("fra_theme") === "dawn";
+    setDawn(isDawn);
+    document.documentElement.classList.toggle("dawn", isDawn);
+    document.documentElement.classList.toggle("dark", !isDawn);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!roleMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".role-menu-container")) setRoleMenu(false);
+    };
+    document.addEventListener("click", handleClick);
+    return () => document.removeEventListener("click", handleClick);
+  }, [roleMenu]);
 
   const switchRole = async (preset: typeof ROLE_PRESETS[number]) => {
     const password = preset.role === "ADMIN" ? "Admin@2025!" : preset.role === "CITIZEN" ? "Citizen@2025!" : "State@2025!";
     try {
       const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: preset.email, password }) });
       const data = await response.json();
-      if (data.access_token && data.user) { setAuthSession(data.access_token, data.user); setUser(data.user); }
-    } catch {
-      const fallback: User = { id: user?.id || 1, full_name: preset.name, email: preset.email, role: preset.role, is_active: true, state: preset.state };
-      setAuthSession(`role-token-${preset.role}_${preset.state || ""}`, fallback);
-      setUser(fallback);
+      if (!response.ok || !data.access_token || !data.user) throw new Error(data.detail || "Unable to switch workspace");
+      setAuthSession(data.access_token, data.user);
+      setUser(data.user);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Unable to switch workspace");
+      setRoleMenu(false);
+      return;
     }
     setRoleMenu(false);
     window.location.reload();
   };
 
   const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
+    const next = !dawn;
+    setDawn(next);
+    try {
+      localStorage.setItem("fra_theme", next ? "dawn" : "canopy");
+    } catch (e) {}
+    document.documentElement.classList.toggle("dawn", next);
+    document.documentElement.classList.toggle("dark", !next);
   };
 
+  if (pathname === "/login") return null;
+
   return (
-    <header className="site-header sticky top-0 z-50">
-      <div className="site-topline">
-        <div className="site-container flex h-8 items-center justify-between text-[11px]">
-          <div className="flex items-center gap-2 text-forest-700"><Award size={13} /><span className="font-semibold tracking-wide">MINISTRY OF TRIBAL AFFAIRS</span><span className="hidden sm:inline text-stone-400">·</span><span className="hidden sm:inline">Forest Rights Act, 2006</span></div>
-          <span className="hidden sm:flex items-center gap-1.5 text-forest-700"><span className="status-dot" /> Atlas workspace</span>
-        </div>
-      </div>
-      <div className="site-container flex min-h-[68px] items-center justify-between gap-3">
-        <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="FRA Atlas home">
-          <span className="brand-mark"><Trees size={23} strokeWidth={1.8} /></span>
-          <span><strong className="block text-[15px] font-bold tracking-tight text-forest-950">FRA Atlas</strong><span className="block text-[10px] tracking-wide text-stone-500">LAND · RIGHTS · LIVELIHOODS</span></span>
+    <header className={`site-header ${scrolled ? "is-scrolled" : ""}`}>
+      <div className="site-container flex min-h-[84px] items-center justify-between gap-3">
+        <Link href="/" className="flex shrink-0 items-center gap-3 group" aria-label="FRA Atlas home">
+          <motion.span
+            className="brand-mark"
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.08, rotate: -8 }}
+            animate={shouldReduceMotion ? undefined : { rotate: [0, 4, -3, 0] }}
+            transition={{ rotate: { duration: 8, repeat: Infinity, ease: "easeInOut" }, scale: { type: "spring", stiffness: 400, damping: 16 } }}
+          >
+            <Trees size={22} strokeWidth={1.9} />
+          </motion.span>
+          <span>
+            <strong className="block font-display text-[22px] font-semibold leading-none text-[var(--ink)]">FRA Atlas</strong>
+            <span className="mt-1 block text-[10px] tracking-[0.22em] text-[var(--gold)] uppercase">Land · Rights · Canopy</span>
+          </span>
         </Link>
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary navigation">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+
+        <nav className="nav-pill hidden lg:flex" aria-label="Primary navigation">
+          {NAV_ITEMS.filter((item) => canAccessPath(user?.role, item.href)).map(({ href, label, icon: Icon }) => {
             const active = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-            return <Link key={href} href={href} className={`nav-link ${active ? "nav-link-active" : ""}`}><Icon size={15} strokeWidth={1.8} />{label}</Link>;
+            return (
+              <Link key={href} href={href} className={`nav-link ${active ? "nav-link-active" : ""}`}>
+                {active && !shouldReduceMotion && (
+                  <motion.span
+                    className="absolute inset-0 -z-10 rounded-full bg-gradient-to-r from-[#e2b45c] to-[#c4843a]"
+                    layoutId="nav-active-bg"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                  />
+                )}
+                {active && shouldReduceMotion && <span className="absolute inset-0 -z-10 rounded-full bg-[#e2b45c]" />}
+                <Icon size={13} strokeWidth={2} />
+                {label}
+              </Link>
+            );
           })}
         </nav>
+
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <button className="role-button" onClick={() => setRoleMenu(!roleMenu)} aria-expanded={roleMenu}><span className="role-avatar">{(user?.full_name || "Officer").slice(0, 1)}</span><span className="hidden sm:block text-left"><strong className="block text-xs text-forest-950">{user?.full_name?.split(" ")[0] || "Workspace"}</strong><span className="block text-[10px] text-stone-500">{(user?.role || "ADMIN").replaceAll("_", " ")}</span></span><ChevronDown size={14} className="text-stone-400" /></button>
-            {roleMenu && <div className="role-menu"><p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-stone-500">Switch role view</p>{ROLE_PRESETS.map((preset) => <button key={`${preset.email}`} onClick={() => switchRole(preset)} className="role-option"><span>{preset.role.replaceAll("_", " ")}</span><small>{preset.desc}</small></button>)}</div>}
+          <div className="hidden sm:flex items-center gap-2 mr-1 text-[10px] uppercase tracking-[0.16em] text-[var(--ink-muted)]">
+            <span className="status-dot" />
+            MoTA live
           </div>
-          <button className="icon-button hidden sm:grid" title="Toggle theme" onClick={toggleTheme} aria-label="Toggle theme">{dark ? <Sun size={17} /> : <Moon size={17} />}</button>
-          <button className="icon-button lg:hidden" onClick={() => setMobileMenu(!mobileMenu)} aria-label={mobileMenu ? "Close navigation" : "Open navigation"}>{mobileMenu ? <X size={19} /> : <Menu size={19} />}</button>
+          <div className="relative role-menu-container">
+            <motion.button
+              className="role-button"
+              onClick={() => setRoleMenu(!roleMenu)}
+              aria-expanded={roleMenu}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+            >
+              <span className="role-avatar">{(user?.full_name || "Officer").slice(0, 1)}</span>
+              <span className="hidden sm:block text-left">
+                <strong className="block text-xs text-[var(--ink)]">{user?.full_name?.split(" ")[0] || "Workspace"}</strong>
+                <span className="block text-[10px] text-[var(--ink-muted)]">{(user?.role || "ADMIN").replaceAll("_", " ")}</span>
+              </span>
+              <motion.span animate={{ rotate: roleMenu ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown size={14} className="text-[var(--gold)]" />
+              </motion.span>
+            </motion.button>
+
+            <AnimatePresence>
+              {roleMenu && (
+                <motion.div
+                  className="role-menu"
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--gold)]">Switch role view</p>
+                  {ROLE_PRESETS.map((preset) => (
+                    <motion.button
+                      key={preset.email}
+                      onClick={() => switchRole(preset)}
+                      className="role-option"
+                      whileHover={shouldReduceMotion ? undefined : { x: 4 }}
+                    >
+                      <span>{preset.role.replaceAll("_", " ")}</span>
+                      <small>{preset.desc}</small>
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <motion.button
+            className="icon-button hidden sm:grid"
+            title="Toggle dawn / canopy"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.9, rotate: 18 }}
+          >
+            {dawn ? <Moon size={17} /> : <Sun size={17} />}
+          </motion.button>
+
+          <motion.button
+            className="icon-button lg:hidden"
+            onClick={() => setMobileMenu(!mobileMenu)}
+            aria-label={mobileMenu ? "Close navigation" : "Open navigation"}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
+          >
+            {mobileMenu ? <X size={19} /> : <Menu size={19} />}
+          </motion.button>
         </div>
       </div>
-      {mobileMenu && <nav className="mobile-nav lg:hidden" aria-label="Mobile navigation">{NAV_ITEMS.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} className={`nav-link ${pathname === href ? "nav-link-active" : ""}`}><Icon size={16} />{label}</Link>)}</nav>}
+
+      <AnimatePresence>
+        {mobileMenu && (
+          <motion.nav
+            className="mobile-nav lg:hidden"
+            aria-label="Mobile navigation"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            {NAV_ITEMS.filter((item) => canAccessPath(user?.role, item.href)).map(({ href, label, icon: Icon }, index) => (
+              <motion.div
+                key={href}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+              >
+                <Link
+                  href={href}
+                  onClick={() => setMobileMenu(false)}
+                  className={`nav-link ${pathname === href ? "nav-link-active !text-[#1a1204]" : ""}`}
+                  style={pathname === href ? { background: "linear-gradient(135deg,#e2b45c,#c4843a)" } : undefined}
+                >
+                  <Icon size={16} />
+                  {label}
+                </Link>
+              </motion.div>
+            ))}
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

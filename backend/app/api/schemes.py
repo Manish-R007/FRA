@@ -12,7 +12,7 @@ from app.services.audit_service import record_audit
 router = APIRouter(prefix="/schemes", tags=["Government Schemes"])
 
 @router.get("", response_model=List[SchemeResponse])
-def get_all_schemes(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_all_schemes(db: Session = Depends(get_db), current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER", "ANALYST"]))):
     schemes = db.query(Scheme).all()
     results = []
     for s in schemes:
@@ -40,7 +40,7 @@ def get_all_schemes(db: Session = Depends(get_db), current_user: User = Depends(
     return results
 
 @router.get("/{scheme_id}", response_model=SchemeResponse)
-def get_scheme(scheme_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_scheme(scheme_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER", "DISTRICT_OFFICER", "FIELD_OFFICER", "ANALYST"]))):
     s = db.query(Scheme).filter(Scheme.id == scheme_id).first()
     if not s:
         raise HTTPException(status_code=404, detail="Scheme not found")

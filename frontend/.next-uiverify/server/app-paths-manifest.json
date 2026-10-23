@@ -1,0 +1,13 @@
+{
+  "/atlas/page": "app/atlas/page.js",
+  "/claims/[id]/page": "app/claims/[id]/page.js",
+  "/audit/page": "app/audit/page.js",
+  "/claims/page": "app/claims/page.js",
+  "/documents/verify/[id]/page": "app/documents/verify/[id]/page.js",
+  "/login/page": "app/login/page.js",
+  "/monitoring/page": "app/monitoring/page.js",
+  "/page": "app/page.js",
+  "/schemes/page": "app/schemes/page.js",
+  "/dss/page": "app/dss/page.js",
+  "/_not-found/page": "app/_not-found/page.js"
+}

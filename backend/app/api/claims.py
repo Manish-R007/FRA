@@ -21,6 +21,21 @@ router = APIRouter(prefix="/claims", tags=["FRA Claims"])
 logger = logging.getLogger(__name__)
 
 
+def _claim_visible_to_user(claim: FRAClaim, user: User) -> bool:
+    if user.role in ("ADMIN", "ANALYST"):
+        return True
+    if user.role == "CITIZEN":
+        return claim.created_by == user.id or (bool(user.village) and claim.village == user.village)
+    if user.role == "STATE_OFFICER":
+        return bool(user.state) and claim.state == user.state
+    if user.role in ("DISTRICT_OFFICER", "FIELD_OFFICER"):
+        if not user.district or claim.district != user.district:
+            return False
+        if user.role == "FIELD_OFFICER":
+            return bool(user.village) and claim.village == user.village
+    return True
+
+
 def _refresh_claim_scheme_assessments(db: Session, claim: FRAClaim) -> None:
     analysis = db.query(SatelliteAnalysis).filter(
         SatelliteAnalysis.claim_id == claim.id,
@@ -53,7 +68,8 @@ def get_claims(
     # RBAC filtering
     if current_user.role == "CITIZEN":
         # Citizen can view own claims or claims in their village
-        query = query.filter((FRAClaim.created_by == current_user.id) | (FRAClaim.village == current_user.village))
+        own_or_village = FRAClaim.created_by == current_user.id
+        query = query.filter(own_or_village if not current_user.village else (own_or_village | (FRAClaim.village == current_user.village)))
     elif current_user.role in ["DISTRICT_OFFICER", "FIELD_OFFICER"] and current_user.district:
         query = query.filter(FRAClaim.district == current_user.district)
     elif current_user.role == "STATE_OFFICER" and current_user.state:
@@ -103,6 +119,8 @@ def get_claim(claim_id_or_id: str, db: Session = Depends(get_db), current_user: 
 
     if not claim:
         raise HTTPException(status_code=404, detail="FRA Claim not found")
+    if not _claim_visible_to_user(claim, current_user):
+        raise HTTPException(status_code=404, detail="FRA Claim not found")
 
     has_geom = db.query(FRAGeometry).filter(FRAGeometry.claim_id == claim.id).first() is not None
     has_sat = db.query(SatelliteAnalysis).filter(SatelliteAnalysis.claim_id == claim.id).first() is not None
@@ -127,6 +145,10 @@ def create_claim(
         verification_status="UNVERIFIED",
         created_by=current_user.id
     )
+    if current_user.role == "CITIZEN":
+        claim.state = current_user.state or claim.state
+        claim.district = current_user.district or claim.district
+        claim.village = current_user.village or claim.village
     db.add(claim)
     db.commit()
     db.refresh(claim)
@@ -152,10 +174,17 @@ def update_claim(
 
     if not claim:
         raise HTTPException(status_code=404, detail="FRA Claim not found")
+    if not _claim_visible_to_user(claim, current_user):
+        raise HTTPException(status_code=404, detail="FRA Claim not found")
 
     old_data = {"status": claim.status, "verification_status": claim.verification_status, "area": claim.area_claimed}
     
     update_dict = claim_update.model_dump(exclude_unset=True)
+    if current_user.role not in ("ADMIN", "ANALYST"):
+        update_dict.pop("state", None)
+        update_dict.pop("district", None)
+        update_dict.pop("village", None)
+        update_dict.pop("created_by", None)
     for field, value in update_dict.items():
         setattr(claim, field, value)
 
@@ -186,6 +215,8 @@ def update_claim_status(
         claim = db.query(FRAClaim).filter(FRAClaim.claim_id == claim_id_or_id).first()
 
     if not claim:
+        raise HTTPException(status_code=404, detail="FRA Claim not found")
+    if not _claim_visible_to_user(claim, current_user):
         raise HTTPException(status_code=404, detail="FRA Claim not found")
 
     old_status = claim.status
@@ -229,7 +260,7 @@ def delete_claim(
 @router.post("/purge-data")
 def purge_all_claims_data(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["ADMIN", "STATE_OFFICER"]))
+    current_user: User = Depends(require_roles(["ADMIN"]))
 ):
     """
     Purges all claims, boundary geometries, satellite analyses, land cover statistics,

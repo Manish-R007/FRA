@@ -132,7 +132,7 @@ def coverage_summary(state: Optional[str] = None, district: Optional[str] = None
 @router.get("/monitoring")
 def coverage_monitoring(level: str = "state", state: Optional[str] = None,
                        district: Optional[str] = None, block: Optional[str] = None,
-                       db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+                       db: Session = Depends(get_db), user: User = Depends(require_roles(OFFICER_ROLES))):
     """Live location rollups; eligibility comes from DSS assessments, delivery from recorded coverage."""
     state = normalize_state_name(state)
     if level not in {"state", "district", "village"}:

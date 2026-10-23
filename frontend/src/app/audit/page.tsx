@@ -1,21 +1,30 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Lock, 
-  Key, 
-  RefreshCw, 
+import {
+  ShieldCheck,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Key,
+  RefreshCw,
   Database,
   Search,
-  Fingerprint
+  Fingerprint,
+  Link2,
+  Hash
 } from "lucide-react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { api } from "@/lib/api";
 import { AuditLog } from "@/lib/types";
 
+const revealItem: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+};
+
 export default function AuditVaultPage() {
+  const shouldReduceMotion = useReducedMotion();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [verification, setVerification] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -49,113 +58,167 @@ export default function AuditVaultPage() {
   }, []);
 
   return (
-    <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-7 px-4 py-7 sm:px-6 lg:px-8 page-enter">
-      {/* Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="mx-auto min-h-[calc(100vh-var(--header-height))] max-w-[1440px] space-y-7 px-4 py-8 sm:px-6 lg:px-8">
+      <motion.div
+        className="fra-page-header flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            <h1 className="font-[Manrope] text-2xl font-bold tracking-tight text-[#203b2b]">Audit history</h1>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 font-mono font-semibold">
-              SHA-256 Hash Chain
+          <div className="flex items-center gap-2.5">
+            <span className="icon-chip">
+              <ShieldCheck className="w-5 h-5" />
             </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-display text-5xl">Audit history</h1>
+                <span className="text-xs px-2.5 py-0.5 rounded-full border border-[var(--line)] text-[var(--gold)] font-mono font-semibold">
+                  SHA-256 Hash Chain
+                </span>
+              </div>
+              <p className="text-xs text-[#68806e] mt-0.5">
+                Immutable, tamper-evident audit trail linking all statutory decisions, OCR verifications, GIS boundary updates, and satellite analyses.
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Immutable, tamper-evident audit trail linking all statutory decisions, OCR verifications, GIS boundary updates, and satellite analyses.
-          </p>
         </div>
 
-        <button
+        <motion.button
           onClick={handleVerifyChain}
           disabled={verifying}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg shadow-blue-950/20 transition-all"
+          className="btn-gold text-xs"
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
         >
           <RefreshCw className={`w-3.5 h-3.5 ${verifying ? "animate-spin" : ""}`} />
           <span>{verifying ? "Verifying..." : "Verify Hash Chain Integrity"}</span>
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       {/* Verification Status Banner */}
       {verification && (
-        <div className={`p-5 rounded-3xl border flex items-center justify-between text-xs shadow-sm ${
-          verification.is_valid
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"
-            : "bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300"
-        }`}>
+        <motion.div
+          className={`p-5 rounded-2xl border flex items-center justify-between text-xs shadow-sm ${
+            verification.is_valid
+              ? "bg-[#f0f8f1] border-[#c5d4b8] text-[#2a4e34]"
+              : "bg-rose-50 border-rose-200 text-rose-800"
+          }`}
+          initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
           <div className="flex items-center gap-3">
             {verification.is_valid ? (
-              <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e4ede0] text-[#3d7a4f]">
+                <CheckCircle2 className="w-5 h-5" />
+              </span>
             ) : (
-              <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400 shrink-0" />
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-100 text-rose-600">
+                <AlertTriangle className="w-5 h-5" />
+              </span>
             )}
             <div>
-              <strong className="block text-sm font-bold text-slate-900 dark:text-white">
+              <strong className="block text-sm font-bold text-[#1a2f23]">
                 {verification.is_valid ? "Cryptographic Chain Verified & Intact" : "Chain Broken or Tampered"}
               </strong>
-              <span>{verification.message}</span>
+              <span className="text-[#68806e]">{verification.message}</span>
             </div>
           </div>
 
           <div className="text-right font-mono text-[11px] hidden sm:block">
-            <span className="text-slate-500 dark:text-slate-400 block">Total Verified Blocks:</span>
-            <strong className="text-slate-900 dark:text-white text-sm">{verification.total_blocks}</strong>
+            <span className="text-[#8c9d8f] block">Total Verified Blocks:</span>
+            <strong className="text-[#1a2f23] text-lg">{verification.total_blocks}</strong>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Audit Blocks Table */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
-        <div className="p-4 bg-slate-100/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-            <Fingerprint className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+      <motion.div
+        className="glass-panel rounded-[1.4rem] overflow-hidden"
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+        whileInView={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.1 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="p-4 border-b border-[var(--line)] flex items-center justify-between bg-[rgba(226,180,92,0.06)]">
+          <span className="text-xs font-bold text-[#1a2f23] flex items-center gap-2">
+            <span className="icon-chip !h-7 !w-7">
+              <Fingerprint className="w-3.5 h-3.5" />
+            </span>
             Chained Hash Blocks ({logs.length})
           </span>
-          <span className="text-[10px] text-slate-500 font-mono">Algorithm: SHA-256</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[#8c9d8f] font-mono flex items-center gap-1">
+              <Lock size={10} /> Algorithm: SHA-256
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-[#faf9f4] text-[#68806e] uppercase text-[10px] tracking-wider border-b border-[#e2e5da]">
               <tr>
-                <th className="py-3 px-4">Block ID</th>
-                <th className="py-3 px-4">Action</th>
-                <th className="py-3 px-4">Entity</th>
-                <th className="py-3 px-4">Current Block Hash</th>
-                <th className="py-3 px-4">Previous Hash</th>
-                <th className="py-3 px-4">Timestamp (UTC)</th>
+                <th className="py-3.5 px-4">Block ID</th>
+                <th className="py-3.5 px-4">Action</th>
+                <th className="py-3.5 px-4">Entity</th>
+                <th className="py-3.5 px-4">Current Block Hash</th>
+                <th className="py-3.5 px-4">Previous Hash</th>
+                <th className="py-3.5 px-4">Timestamp (UTC)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
+            <tbody className="divide-y divide-[#f0f1e9] text-[#3d5a46]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-slate-500">
-                    Loading cryptographic audit vault...
+                  <td colSpan={6} className="py-12 text-center text-[#8c9d8f]">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-[#4a9460] border-t-transparent rounded-full animate-spin" />
+                      Loading cryptographic audit vault...
+                    </div>
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-emerald-50/40 dark:hover:bg-slate-900/50 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-500 dark:text-slate-400">#{log.id}</td>
-                    <td className="py-3 px-4 text-emerald-700 dark:text-emerald-400 font-bold">{log.action}</td>
-                    <td className="py-3 px-4 text-slate-900 dark:text-slate-200">
-                      {log.entity} (#{log.entity_id})
+                logs.map((log, index) => (
+                  <motion.tr
+                    key={log.id}
+                    className="hover:bg-[#f5f8f2] transition-colors"
+                    initial={shouldReduceMotion ? false : { opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: Math.min(index * 0.02, 0.5) }}
+                  >
+                    <td className="py-3.5 px-4 font-bold text-[#8c9d8f]">
+                      <span className="inline-flex items-center gap-1">
+                        <Hash size={10} />#{log.id}
+                      </span>
                     </td>
-                    <td className="py-3 px-4 text-amber-700 dark:text-amber-400 font-mono text-[11px] truncate max-w-xs" title={log.hash}>
-                      {log.hash.slice(0, 18)}...{log.hash.slice(-8)}
+                    <td className="py-3.5 px-4">
+                      <span className="px-2 py-0.5 rounded-md bg-[#e4ede0] text-[#3d7a4f] font-bold text-[10px]">
+                        {log.action}
+                      </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 font-mono text-[11px] truncate max-w-xs" title={log.previous_hash}>
-                      {log.previous_hash.slice(0, 18)}...{log.previous_hash.slice(-8)}
+                    <td className="py-3.5 px-4 text-[#1a2f23]">
+                      {log.entity} <span className="text-[#8c9d8f]">(#{log.entity_id})</span>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
+                    <td className="py-3.5 px-4 text-[11px] truncate max-w-xs" title={log.hash}>
+                      <span className="text-[#9c6644]">{log.hash.slice(0, 18)}</span>
+                      <span className="text-[#aab8ad]">...</span>
+                      <span className="text-[#9c6644]">{log.hash.slice(-8)}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#8c9d8f] text-[11px] truncate max-w-xs" title={log.previous_hash}>
+                      <span className="flex items-center gap-1">
+                        <Link2 size={9} className="shrink-0" />
+                        {log.previous_hash.slice(0, 18)}...{log.previous_hash.slice(-8)}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#68806e] text-[11px]">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
