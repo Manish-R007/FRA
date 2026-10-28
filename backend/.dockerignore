@@ -7,6 +7,7 @@ __pycache__/
 venv/
 uploads/
 *.db
+!fra_atlas.db
 *.sqlite
 *.sqlite3
 .env

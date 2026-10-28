@@ -925,6 +925,9 @@ video {
 .min-h-24{
   min-height: 6rem;
 }
+.min-h-\[50vh\]{
+  min-height: 50vh;
+}
 .min-h-\[84px\]{
   min-height: 84px;
 }
